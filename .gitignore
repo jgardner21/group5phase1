@@ -1,1 +1,9 @@
+#This is a local file I used to store my GitHub access token
 gitaccess.txt
+
+#Not ignoring this now because we want it to be consistant across our dev environments
+#Basically configures how TypeScript will compile into JavaScript
+#We'll want to ignore this in a final distribution though
+#tsconfig.json We
+
+node_modules/

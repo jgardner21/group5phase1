@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/jgardner21/group5phase1/issues"
   },
-  "homepage": "https://github.com/jgardner21/group5phase1#readme"
+  "homepage": "https://github.com/jgardner21/group5phase1#readme",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
 }
