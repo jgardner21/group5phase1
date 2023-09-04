@@ -1,0 +1,19 @@
+{
+  "name": "group5phase1",
+  "version": "1.0.0",
+  "description": "Phase 1 implementation of our project for ECE461",
+  "main": "run.js",
+  "scripts": {
+    "test": "./run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jgardner21/group5phase1.git"
+  },
+  "author": "Taylor Le Lievre, Jack Gardner, Alex Pienkowski, Devesh Ramiya",
+  "license": "LGPL-2.1-only",
+  "bugs": {
+    "url": "https://github.com/jgardner21/group5phase1/issues"
+  },
+  "homepage": "https://github.com/jgardner21/group5phase1#readme"
+}
