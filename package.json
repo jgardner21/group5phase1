@@ -4,6 +4,7 @@
   "description": "Phase 1 implementation of our project for ECE461",
   "main": "run.js",
   "scripts": {
+    "build": "npx tsc",
     "test": "./run test"
   },
   "repository": {

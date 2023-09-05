@@ -1,4 +1,9 @@
 #This is a local file I used to store my GitHub access token
 gitaccess.txt
 
+#Modules folder
 node_modules/
+
+
+#Ignore all .js files
+*.js
