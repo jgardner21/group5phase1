@@ -18,5 +18,8 @@
   "homepage": "https://github.com/jgardner21/group5phase1#readme",
   "devDependencies": {
     "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "commander": "^11.0.0"
   }
 }
