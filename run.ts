@@ -3,10 +3,10 @@
 
 //The following dependancies need to be vendored with the software
 
-import { Command } from "commander";
-import get_metric_scores from "./urlparse_cmd/process_url";
-import begin_tests from "./test_cmd/test_cmd";
-import install_dependancies from "./install_cmd/install";
+const Command = require('commander');
+const get_metric_scores = require('./urlparse_cmd/process_url');
+const begin_tests = require('./test_cmd/test_cmd');
+const install_dependancies = require('./install_cmd/install');
 
 const program = new Command();
 

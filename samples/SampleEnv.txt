@@ -1,0 +1,5 @@
+# You might use this kind of file as a `.env` file during project development. Because this file contains a GITHUB_TOKEN, you would not commit it to git (use a .gitignore file to effect this). You would use it by running ". .env" to set environment variables prior to interacting with your `run` CLI.
+
+GITHUB_TOKEN=ghp_nqp7EaHtK5SKzj5WEA2hRbsq6zeejjnnfuHwR
+LOG_LEVEL=1
+LOG_FILE=/Users/myUser/IdeaProjects/logs/mylog.txt
