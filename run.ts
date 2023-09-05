@@ -14,7 +14,7 @@ program
     .version("0.0.1")
     .argument("<filename>", "Absolute file path of ASCII-encoded, newline delimited package URLs")
     .description("Parse package URLs and provide metric scores for each package")
-    .action((filename) => {
+    .action((filename: string) => {
         //open filename
         console.log("Success")
     })
