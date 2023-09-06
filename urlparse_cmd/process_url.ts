@@ -1,15 +1,26 @@
+const fs = require('fs');
 
 export default function get_metric_scores(filename: string) {
 
     if(filename.charAt(0) != "/") {
-        console.log("Invalid  command")
+        console.error("Invalid command");
+        return;
     }
-    else {
-        console.log(`Parse success with filename ${filename}`);
-    }
-    //Step 1: Open file
 
+    //Step 1: Open file
+    try {
+        var urlfile = fs.readFileSync(filename);
+        console.log("Successfully opened file");
+        console.log(urlfile.toString());
+        
+    }
+    catch (err) { 
         //Step 1.1: Verify file exists, return error if it doesn't
+        console.error("Invalid file name, please provide the absolute file path of an ASCII-encoded, newline-delimited URLs");
+        return;
+    }
+
+    console.log("Success");
 
     //Step 2: Parse through each line of the file, extract URL information
 
