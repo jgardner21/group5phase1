@@ -35,9 +35,11 @@ program
     .argument("<filename>", "Absolute file path of ASCII-encoded, newline delimited package URLs") //This will pick up on any command input that isnt install or test
     .description("Parse package URLs and provide metric scores for each package")
     .action((filename: string) => {
-
+        
         get_metric_scores(filename);
 
     });
+
+//Need to figure out how to exit 0 on success or non-zero on failure
 
 program.parse();
