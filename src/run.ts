@@ -12,17 +12,17 @@ const program = new Command();
 
 program
     .version("0.0.1")
-    .command("install")
+    .command("install") //Adds install command
     .description("Install all dependancies for package manager")
     .action(() => {
 
-        install_dependancies()
+        install_dependancies() //Manage the command execution in another file
 
     });
 
 program
     .version("0.0.1")
-    .command("test")
+    .command("test") //Adds test command
     .description("Run test suite on codebase")
     .action(() => {
 
@@ -32,14 +32,14 @@ program
 
 program
     .version("0.0.1")
-    .argument("<filename>", "Absolute file path of ASCII-encoded, newline delimited package URLs")
+    .argument("<filename>", "Absolute file path of ASCII-encoded, newline delimited package URLs") //This will pick up on any command input that isnt install or test
     .description("Parse package URLs and provide metric scores for each package")
     .action((filename: string) => {
-
+        
         get_metric_scores(filename);
 
     });
 
-program.parse();
+//Need to figure out how to exit 0 on success or non-zero on failure
 
-//Currently, I can manually delete the file extension off of the run.js extention to make commands work as ./run <command>, but there has to be a better way of doing that
+program.parse();

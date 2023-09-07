@@ -2,10 +2,10 @@
   "name": "group5phase1",
   "version": "1.0.0",
   "description": "Phase 1 implementation of our project for ECE461",
-  "main": "run.js",
+  "main": "run",
   "scripts": {
     "build": "npx tsc",
-    "test": "./run test"
+    "test": "./run /home/shay/a/tlelievr/Documents/group5phase1/samples/SampleUrlFile.txt"
   },
   "repository": {
     "type": "git",

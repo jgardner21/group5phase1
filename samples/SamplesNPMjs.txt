@@ -1,0 +1,9 @@
+https://www.npmjs.com/package/async
+https://www.npmjs.com/package/lodash
+https://www.npmjs.com/package/fastify
+https://www.npmjs.com/package/socket.io
+https://www.npmjs.com/package/rxjs
+https://www.npmjs.com/package/totallyrealpackage
+https://www.npmjs.com/package/underscore
+https://www.npmjs.com/package/ramda
+https://www.npmjs.com/package/validator
