@@ -4,8 +4,10 @@ export class GithubAPIService {
     private octokit: Octokit;
 
     constructor() {
+        const gitkey = process.env.GITHUB_TOKEN;
+
         this.octokit = new Octokit({
-            auth: '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'
+            auth: gitkey
         });
     }
     async fetchNumOfContributors(owner: string, repo: string) {

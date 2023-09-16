@@ -3,6 +3,7 @@
 
 //The following dependancies need to be vendored with the software
 
+require('dotenv').config()
 import { Command } from 'commander';
 import get_metric_scores from './urlparse_cmd/process_url';
 import begin_tests from './test_cmd/test_cmd';
