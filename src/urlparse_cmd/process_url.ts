@@ -1,8 +1,43 @@
 const fs = require('fs');
 const { execSync } = require('child_process')
+import { GithubAPIService } from './metric_calc/git_API_call'
+import { MetricScores } from './metric_calc/pkg_metric';
 //REALLY NEED TO MAKE THESE CONSISTANT BETWEEN IMPORT AND REQUIRE
 
-export default function get_metric_scores(filename: string) {
+
+
+class MetricScoreResults {
+    url: string;
+    api_caller!: GithubAPIService; //Exclamation mark means we guarantee the api caller is initialized at some point when it needs to be
+    net_score: number = 0; //All scores by default 0
+    ramp_up: number = 0;
+    correctness: number = 0;
+    bus_factor: number = 0;
+    maintainer: number = 0;
+    license: number = 0;
+
+    constructor (url: string) {
+        this.url = url;
+    }
+
+    init_api_caller(owner: string, repo: string) {
+        this.api_caller = new GithubAPIService(owner, repo);
+
+        //ADD VALIDATION FOR REPO EXISTANCE
+    }
+
+    calc_net_score() {
+        this.net_score = (this.license) * (this.bus_factor * 0.45 + 0.275 * (this.correctness + this.maintainer))
+    }
+
+    print_scores() {
+        console.log(`{"URL":"${this.url}", "NET_SCORE":${this.net_score}, "RAMP_UP_SCORE":${this.ramp_up}, "CORRECTNESS_SCORE":${this.correctness}, "BUS_FACTOR_SCORE":${this.bus_factor}, "RESPONSIVE_MAINTAINER_SCORE":${this.maintainer}, "LICENSE_SCORE":${this.license}}`) //Not sure if doing it like this is ok?
+    }
+}
+
+
+
+export default async function get_metric_scores(filename: string) {
 
     if(filename.charAt(0) != "/") { //Check if the input is an actual filepath
         console.error("Invalid command");
@@ -22,7 +57,7 @@ export default function get_metric_scores(filename: string) {
 
     const url_list = (url_file.toString()).split('\n'); //Get each URL as an individual string in an array
 
-    const npm_regex_check = new RegExp("https://www.npmjs.com/package/(?<pkg_name>[a-z\-]+)")   //Matches a correctly formatted npmjs URL
+    const npm_regex_check = new RegExp("https://www.npmjs.com/package/(?<pkg_name>.+)")   //Matches a correctly formatted npmjs URL
     //What are naming limitations on npm packages?
     const github_regex_check = new RegExp("https://github.com/(?<owner>.+)/(?<repo>.+)")  //Matches a correctly formatted GitHub URL
     //CAN WE ASSUME ALL CORRECT LINKS WILL BE OF THESE FORMS
@@ -32,10 +67,10 @@ export default function get_metric_scores(filename: string) {
     //Step 2: Parse through each line of the file, extract URL information
     for (var i = 0; i < url_list.length; i++) { //Loop through array of URLs
 
-        console.log(url_list[i]);
+        const url_metrics = new MetricScoreResults(url_list[i])
 
-        const is_npm_link = npm_regex_check.exec(url_list[i]); //Gets the package name from the URL
-        const is_github_link = github_regex_check.exec(url_list[i])
+        const is_npm_link = npm_regex_check.exec(url_metrics.url); //Gets the package name from the URL
+        const is_github_link = github_regex_check.exec(url_metrics.url)
 
         if(is_npm_link != null && is_npm_link.groups !== undefined) { //Need the type guard or TS complains at me
             
@@ -44,30 +79,42 @@ export default function get_metric_scores(filename: string) {
             
             const github_fields = npm_to_github(pkg_name)
 
-            // if(github_fields != null) {
-            //     //metric_scoring_function(github_fields.owner, github_fields.repo)
-            // }
+            if(github_fields != null) { //If they are null, just print out 0s and log error
+                url_metrics.init_api_caller(github_fields.owner, github_fields.repo)
+                //If statement to validate repo existance
+                const scores = new MetricScores(url_metrics.api_caller);
+                url_metrics.bus_factor = scores.getBusFactor()
+                url_metrics.ramp_up = scores.getRampUp()
+                url_metrics.license = scores.getLicense()
+                url_metrics.maintainer = scores.getResponsiveness();
+                url_metrics.correctness = scores.getCorrectness();
+                url_metrics.calc_net_score()
+            }        
+            
         }
         else if (is_github_link != null && is_github_link.groups !== undefined) {
             const owner_name = is_github_link.groups.owner; //Gets owner name from the first URL field
             const repo_name = is_github_link.groups.repo; //Gets repo name from second URL field
             //These are the 2 things you need for a GitHub API call
 
-            console.log(owner_name);
-            console.log(repo_name);
-            //metric_scoring_function(owner_name, repo_name)
-            //Not defined yet, but will recieve the owner name and repo name as parameters
-
-            //SHOULD WE BE PRINTING IN HERE OR WITHIN THE METRIC SCORING FUNCTION
-
-            //SHOULD WE BE VALIDATING THE PACKAGES EXISTANCE IN HERE?
+            url_metrics.init_api_caller(owner_name, repo_name);
+            //If statement to check if repo exists
+            const scores = new MetricScores(url_metrics.api_caller);
+            url_metrics.bus_factor = scores.getBusFactor()
+            url_metrics.ramp_up = scores.getRampUp()
+            url_metrics.license = scores.getLicense()
+            url_metrics.maintainer = scores.getResponsiveness();
+            url_metrics.correctness = scores.getCorrectness();
+            url_metrics.calc_net_score()
         }
         else {
             
-            console.log("Invalid link")
+            console.log("Invalid link");
             
             //****Do we want to fully quit execution if an invalid link is in the file****
         }
+
+        url_metrics.print_scores();
 
     }
 
@@ -82,13 +129,13 @@ function npm_to_github(pkg_name: string) {
         //Stdio pipe prevents error msgs from being printed 
     }
     catch(err) {
-        console.log("npmjs package name invalid\n")
+        //console.log("npmjs package name invalid\n")
         return null;
         //If a package name is invalid, do we want to just move on to the next link?
         //What do we do if there is no GitHub repo linked
     }
 
-    const extract_github = new RegExp('github.com/(?<owner>.+)/(?<repo>.+?)(.git)?\n') //Need this to be less specific than the regex above
+    const extract_github = new RegExp('github.com/(?<owner>.+)/(?<repo>.+?)(\.git)?\n') //Need this to be less specific than the regex above
 
     //If its possible for reponame to not end in .git, this won't work (need to ask abt that)
     
