@@ -20,5 +20,10 @@ export class Responsive_MaintainerCalculator {
         //Same as above
 
         return -1;
-    }   
+    }
+
+    totalResponsivenessScore(pull_response_time: number, issue_response_time: number): number {
+
+        return pull_response_time + issue_response_time;  //Not our actual calculation method just using it as a placeholder
+    }
 }

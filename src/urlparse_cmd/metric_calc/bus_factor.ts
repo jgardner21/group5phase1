@@ -65,7 +65,9 @@ export class BusFactorCalculator {
 
     //Do the score calculation this in superclass instead
 
-    // processBusScore(contributors, code_ownerShip, contributorFreq): number {
-    //     return 0;
-    // }
+    totalBusScore(contributors: number, code_ownership: number, contributor_freq: number, pull_frequency: number): number {
+
+        return contributors + code_ownership + contributor_freq + pull_frequency; //Not our actual calculation method just using it as a placeholder
+        
+    }
 }

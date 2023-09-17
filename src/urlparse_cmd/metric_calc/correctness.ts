@@ -46,5 +46,8 @@ export class CorrectnessCalculator {
         return -1;
     }
 
-
+    totalCorrectnessScore(num_stars: number, num_forks: number, bug_reports: number): number {
+        
+        return num_stars + num_forks + bug_reports;  //Not our actual calculation method just using it as a placeholder
+    }
 }

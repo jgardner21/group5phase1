@@ -34,7 +34,7 @@ export class MetricScores {
         //Do whatever math with it
 
         //
-        return num_contributors + contributor_list + code_ownership + pull_contrib_frequency; //Not our actual calculation method just using it as a placeholder
+        return this.bus_factor.totalBusScore(num_contributors, contributor_list, code_ownership, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
     }
 
     getRampUp(): number {
@@ -47,7 +47,7 @@ export class MetricScores {
         const num_forks = this.correctness.calcNumForks();
         const bug_reports = this.correctness.calcBugReports();
 
-        return num_stars + num_forks + bug_reports; //Not our actual calculation method just using it as a placeholder
+        return this.correctness.totalCorrectnessScore(num_stars, num_forks, bug_reports); //Not our actual calculation method just using it as a placeholder
     }
 
     getLicense(): number {
@@ -61,6 +61,6 @@ export class MetricScores {
 
         const issue_response_time = this.responiveness.calcIssueResponseTime();
 
-        return pull_response_time + issue_response_time;
+        return this.responiveness.totalResponsivenessScore(pull_response_time, issue_response_time);
     }
 }
