@@ -36,10 +36,10 @@ export class BusFactorCalculator {
     calcContributorList(): number {
         const contributors = this.githubAPI.fetchAPIdata('contributors');
         //fetch
-        contributorFreq = {};
-        for (contributor in contributors) {
-            contributorFreq[contributors['id']] = contributors['frequency'];
-        }
+        // const contributorFreq = {};
+        // for (let contributor in contributors) {
+        //     contributorFreq{contributors['id']} = contributors['frequency'];
+        // }
 
         //process
 
@@ -62,10 +62,10 @@ export class BusFactorCalculator {
 
 
         //fetch
-        pullFreq = {};
-        for (pull in pulls.data) {
-            pullFreq[pull['id']] = pull['frequency'];
-        }
+        // pullFreq = {};
+        // for (pull in pulls.data) {
+        //     pullFreq[pull['id']] = pull['frequency'];
+        // }
 
         //process
 
@@ -75,9 +75,9 @@ export class BusFactorCalculator {
 
     //Do the score calculation this in superclass instead
 
-    totalBusScore(contributors: number, code_ownership: number, contributor_freq: number, pull_frequency: number): number {
+    totalBusScore(contributors: number, contributor_freq: number, pull_frequency: number): number {
 
-        return contributors + code_ownership + contributor_freq + pull_frequency; //Not our actual calculation method just using it as a placeholder
+        return contributors + contributor_freq + pull_frequency; //Not our actual calculation method just using it as a placeholder
 
     }
 }

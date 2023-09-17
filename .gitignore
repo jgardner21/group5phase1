@@ -2,8 +2,11 @@
 gitaccess.txt
 .env
 
+
 #Modules folder
 node_modules/
+
+cloned_repos/
 
 
 #Ignore everything in the /dist folder

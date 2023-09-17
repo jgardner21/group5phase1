@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/jgardner21/group5phase1.git"
   },
-  "author": "Taylor Le Lievre, Jack Gardner, Alex Pienkowski, Devesh Ramiya",
+  "author": "Taylor Le Lievre, Jack Gardner, Rebecca Rupp, Devesh Ramiya",
   "license": "LGPL-2.1-only",
   "bugs": {
     "url": "https://github.com/jgardner21/group5phase1/issues"
@@ -25,6 +25,8 @@
     "axios": "^1.5.0",
     "commander": "^11.0.0",
     "dotenv": "^16.3.1",
-    "octokit": "^3.1.0"
+    "isomorphic-git": "^1.24.5",
+    "octokit": "^3.1.0",
+    "spdx-license-ids": "^3.0.13"
   }
 }

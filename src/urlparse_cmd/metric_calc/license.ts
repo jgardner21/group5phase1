@@ -14,7 +14,9 @@ export class LicenseCalculator {
     // }
 
     getPkgLicense() { //Don't know what type this would return
-        const pkg_license = this.githubAPI.fetchLicense()
+        const acme_license = 'LGPL-2.1-only'
+
+        // pkg_license = pkg_license.license.spdx_id;
 
         return -1;
     }

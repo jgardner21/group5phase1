@@ -9,6 +9,7 @@ import { MetricScores } from './metric_calc/pkg_metric';
 class MetricScoreResults {
     url: string;
     api_caller!: GithubAPIService; //Exclamation mark means we guarantee the api caller is initialized at some point when it needs to be
+    repo_obj!: any; //No way around it
     net_score: number = 0; //All scores by default 0
     ramp_up: number = 0;
     correctness: number = 0;
@@ -20,10 +21,20 @@ class MetricScoreResults {
         this.url = url;
     }
 
-    init_api_caller(owner: string, repo: string) {
+    async init_api_caller (owner: string, repo: string): Promise<boolean> {
         this.api_caller = new GithubAPIService(owner, repo);
 
-        //ADD VALIDATION FOR REPO EXISTANCE
+        //Test API is valid by gathering big repo object that well need anyways
+        //Gonna use a specialized call
+        try {
+            this.repo_obj = await this.api_caller.fetchAPIdata('')
+
+            return true
+        }
+        catch (err) {
+            return false
+        }
+
     }
 
     calc_net_score() {
@@ -80,15 +91,19 @@ export default async function get_metric_scores(filename: string) {
             const github_fields = npm_to_github(pkg_name)
 
             if(github_fields != null) { //If they are null, just print out 0s and log error
-                url_metrics.init_api_caller(github_fields.owner, github_fields.repo)
+                if(await url_metrics.init_api_caller(github_fields.owner, github_fields.repo)) {
+                    const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj);
+                    //scores.getNumUsers(url_metrics.api_caller); //Need to initalize the approx num. of users for the repo
+
+                    url_metrics.bus_factor = scores.getBusFactor()
+                    url_metrics.ramp_up = scores.getRampUp()
+                    url_metrics.license = scores.getLicense()
+                    url_metrics.maintainer = scores.getResponsiveness();
+                    url_metrics.correctness = scores.getCorrectness();
+                    url_metrics.calc_net_score()
+                }
                 //If statement to validate repo existance
-                const scores = new MetricScores(url_metrics.api_caller);
-                url_metrics.bus_factor = scores.getBusFactor()
-                url_metrics.ramp_up = scores.getRampUp()
-                url_metrics.license = scores.getLicense()
-                url_metrics.maintainer = scores.getResponsiveness();
-                url_metrics.correctness = scores.getCorrectness();
-                url_metrics.calc_net_score()
+
             }        
             
         }
@@ -97,15 +112,18 @@ export default async function get_metric_scores(filename: string) {
             const repo_name = is_github_link.groups.repo; //Gets repo name from second URL field
             //These are the 2 things you need for a GitHub API call
 
-            url_metrics.init_api_caller(owner_name, repo_name);
+            if(await url_metrics.init_api_caller(owner_name, repo_name)) {
+                const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj);
+                //scores.getNumUsers(url_metrics.api_caller); //Need to initalize the approx num. of users for the repo
+                url_metrics.bus_factor = scores.getBusFactor();
+                url_metrics.ramp_up = scores.getRampUp();
+                url_metrics.license = scores.getLicense();
+                url_metrics.maintainer = scores.getResponsiveness();
+                url_metrics.correctness = scores.getCorrectness();
+                url_metrics.calc_net_score()
+            }
             //If statement to check if repo exists
-            const scores = new MetricScores(url_metrics.api_caller);
-            url_metrics.bus_factor = scores.getBusFactor()
-            url_metrics.ramp_up = scores.getRampUp()
-            url_metrics.license = scores.getLicense()
-            url_metrics.maintainer = scores.getResponsiveness();
-            url_metrics.correctness = scores.getCorrectness();
-            url_metrics.calc_net_score()
+
         }
         else {
             
@@ -145,9 +163,9 @@ function npm_to_github(pkg_name: string) {
 
         var repo_owner = match_github.groups.owner;
         var repo_name = match_github.groups.repo;
-        console.log(git_link.toString())
-        console.log(repo_owner)
-        console.log(repo_name + "\n")
+        // console.log(git_link.toString())
+        // console.log(repo_owner)
+        // console.log(repo_name + "\n")
         return { owner: repo_owner, repo: repo_name }
     }
     else {

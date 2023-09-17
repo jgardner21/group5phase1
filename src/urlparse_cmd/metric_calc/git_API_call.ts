@@ -19,15 +19,37 @@ export class GithubAPIService {
     }
     async fetchAPIdata(feature: string) {
         try {
-            const response = await this.octokit.request(`GET /repos/{owner}/{repo}/${feature}`, {
-                owner: this.owner,
-                repo: this.repo,
-                headers: {
-                    'X-GitHub-Api-Version': '2022-11-28'
+            if(feature == '') { //To get the big repo object, we just do get /repos/owner/repo
+                try {
+                    const response = await this.octokit.request(`GET /repos/{owner}/{repo}`, {
+                        owner: this.owner,
+                        repo: this.repo,
+                        headers: {
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        }
+                    })
+                    return response.data;
                 }
-            })
-            return response.data;
+                catch (error) {
+                    console.log(this.owner + "/" + this.repo)
+                    throw new Error(`Failed to get repo from GitHub API: ${error}`);
+                }
+
+            }
+            else {
+                const response = await this.octokit.request(`GET /repos/{owner}/{repo}/${feature}`, {
+                    owner: this.owner,
+                    repo: this.repo,
+                    headers: {
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    }
+                })
+                return response.data;
+            }
+
         } catch (error) {
+            console.log(`Attempted to call ${feature} endpoint`)
+            console.log(this.owner + "/" + this.repo)
             throw new Error(`Failed to fetch contributors: ${error}`);
         }
     }

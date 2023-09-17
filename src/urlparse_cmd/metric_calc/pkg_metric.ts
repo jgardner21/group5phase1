@@ -13,12 +13,18 @@ export class MetricScores {
     license: LicenseCalculator;
     responiveness: ResponsiveMaintainerCalculator;
 
-    constructor(githubAPI: GithubAPIService) {
+    constructor(githubAPI: GithubAPIService, repo_obj: Object) {
         this.bus_factor = new BusFactorCalculator(githubAPI);
         this.ramp_up = new RampUpCalculator(githubAPI);
-        this.correctness = new CorrectnessCalculator(githubAPI);
+        this.correctness = new CorrectnessCalculator(githubAPI, repo_obj);
         this.license = new LicenseCalculator(githubAPI);
         this.responiveness = new ResponsiveMaintainerCalculator(githubAPI);
+
+    }
+
+    async getNumUsers(githubAPI: GithubAPIService) {
+        this.num_users = (await githubAPI.fetchAPIdata('/traffic/clones')).count;
+        console.log(this.num_users)
     }
 
     getBusFactor(): number {
@@ -28,13 +34,12 @@ export class MetricScores {
 
         const contributor_list = this.bus_factor.calcContributorList();
 
-        const code_ownership = this.bus_factor.calcOwnership();
 
         const pull_contrib_frequency = this.bus_factor.calcPullContributions();
         //Do whatever math with it
 
         //
-        return this.bus_factor.totalBusScore(num_contributors, contributor_list, code_ownership, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
+        return this.bus_factor.totalBusScore(num_contributors, contributor_list, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
     }
 
     getRampUp(): number {

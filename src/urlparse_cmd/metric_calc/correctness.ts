@@ -2,10 +2,13 @@ import { GithubAPIService } from './git_API_call';
 
 export class CorrectnessCalculator {
     private githubAPI: GithubAPIService;
+    private num_stars: number;
+    private num_forks: number;
 
-
-    constructor(githubAPI: GithubAPIService) {
+    constructor(githubAPI: GithubAPIService, repo_obj: any) {
         this.githubAPI = githubAPI;
+        this.num_stars = repo_obj.stargazers_count;
+        this.num_forks = repo_obj.forks;
     }
 
     //Taylor: I think instead of having 1 function where we fetch all the values we need, we make each of these calls in individual functions
@@ -19,9 +22,9 @@ export class CorrectnessCalculator {
     // }
 
     calcNumStars(): number {
-        const data = this.githubAPI.fetchAPIdata('stars');
+        //const data = this.githubAPI.fetchAPIdata('stars');
         //fetch
-        const num_stars = data.length;
+        //const num_stars = data.length;
         //process
 
         return -1;
@@ -29,18 +32,18 @@ export class CorrectnessCalculator {
     }
 
     calcNumForks(): number {
-        const data = this.githubAPI.fetchAPIdata('forks');
+        //const data = this.githubAPI.fetchAPIdata('forks');
         //fetch
-        const num_forks = data.length;
+        //const num_forks = data.length;
         //processs
 
         return -1;
     }
 
     calcBugReports(): number {
-        const data = this.githubAPI.fetchAPIdata('issues');
+        //const data = this.githubAPI.fetchAPIdata('issues');
         //fetch
-        const bug_report = data.length;
+        //const bug_report = data.length;
         //process
 
         return -1;

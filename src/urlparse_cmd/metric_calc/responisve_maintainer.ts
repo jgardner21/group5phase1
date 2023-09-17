@@ -22,6 +22,8 @@ export class Responsive_MaintainerCalculator {
         return -1;
     }
 
+    //Should add time since last commit to this
+
     totalResponsivenessScore(pull_response_time: number, issue_response_time: number): number {
 
         return pull_response_time + issue_response_time;  //Not our actual calculation method just using it as a placeholder
