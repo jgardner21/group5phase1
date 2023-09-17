@@ -19,9 +19,9 @@ export class CorrectnessCalculator {
     // }
 
     calcNumStars(): number {
-        const num_stars = this.githubAPI.fetchNumStars();
+        const data = this.githubAPI.fetchAPIdata('stars');
         //fetch
-
+        const num_stars = data.length;
         //process
 
         return -1;
@@ -29,25 +29,25 @@ export class CorrectnessCalculator {
     }
 
     calcNumForks(): number {
-        const num_forks = this.githubAPI.fetchNumForks();
+        const data = this.githubAPI.fetchAPIdata('forks');
         //fetch
-
+        const num_forks = data.length;
         //processs
 
         return -1;
     }
 
     calcBugReports(): number {
-        const bug_reports = this.githubAPI.fetchBugReports();
+        const data = this.githubAPI.fetchAPIdata('issues');
         //fetch
-
+        const bug_report = data.length;
         //process
 
         return -1;
     }
 
     totalCorrectnessScore(num_stars: number, num_forks: number, bug_reports: number): number {
-        
+
         return num_stars + num_forks + bug_reports;  //Not our actual calculation method just using it as a placeholder
     }
 }

@@ -17,47 +17,46 @@ export class GithubAPIService {
             auth: gitkey
         });
     }
-
-    async fetchNumOfContributors() {
+    async fetchAPIdata(feature: string) {
         try {
-
-            const response = await this.octokit.rest.repos.listContributors({
+            const response = await this.octokit.request(`GET /repos/{owner}/{repo}/${feature}`, {
                 owner: this.owner,
                 repo: this.repo,
-            });
-            return response.data.length;
-
+                headers: {
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            })
+            return response.data;
         } catch (error) {
-            console.log(this.repo)
             throw new Error(`Failed to fetch contributors: ${error}`);
-
         }
     }
 
-    async getCodeOwnerShip() {
 
-    }
-    async fetchFrequencyOfContributors() {
+    // async getCodeOwnerShip() {
 
-    }
-    async fetchNumStars() {
+    // }
+    // async fetchFrequencyOfContributors() {
 
-    }
-    async fetchNumForks() {
+    // }
+    // async fetchNumStars() {
 
-    }
-    async fetchBugReports() {
+    // }
+    // async fetchNumForks() {
 
-    }
-    async fetchLicense() {
+    // }
+    // async fetchBugReports() {
 
-    }
-    async fetchDocumentationData() {
+    // }
+    // async fetchLicense() {
 
-    }
-    async fetchSourceCodeData() {
+    // }
+    // async fetchDocumentationData() {
 
-    }
+    // }
+    // async fetchSourceCodeData() {
+
+    // }
 
 
 }

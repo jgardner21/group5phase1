@@ -1,7 +1,7 @@
 import { GithubAPIService } from './git_API_call';
 
 export class BusFactorCalculator {
-    
+
     private githubAPI: GithubAPIService;
 
     constructor(githubAPI: GithubAPIService) {
@@ -21,10 +21,11 @@ export class BusFactorCalculator {
 
     //function to return a score from 1-5 depending on the contributors
     calcContributorNum(): number {
-        const contributors = this.githubAPI.fetchNumOfContributors();
+        const contributors = this.githubAPI.fetchAPIdata('contributors');
         //fetch
 
         //process
+
 
         return -1; //Placeholders
 
@@ -33,8 +34,12 @@ export class BusFactorCalculator {
     //and find frequencies of the contributors 
     //and return a number form 0 - 5.
     calcContributorList(): number {
-        const contributorFreq = this.githubAPI.fetchFrequencyOfContributors();
+        const contributors = this.githubAPI.fetchAPIdata('contributors');
         //fetch
+        contributorFreq = {};
+        for (contributor in contributors) {
+            contributorFreq[contributors['id']] = contributors['frequency'];
+        }
 
         //process
 
@@ -42,20 +47,25 @@ export class BusFactorCalculator {
 
     }
 
-    calcOwnership(): number {
-        const code_ownership = this.githubAPI.getCodeOwnerShip();
-        //fetch
+    // calcOwnership(): number {
+    //     const code_ownership = this.githubAPI.getCodeOwnerShip();
+    //     //fetch
 
-        //process
+    //     //process
 
-        return -1;
-    }
+    //     return -1;
+    // }
 
     //Need a function to calc frequency of 1 person's involvement with pull requests
     calcPullContributions(): number {
-        //const pull_frequency = something API related
+        const pulls = this.githubAPI.fetchAPIdata('pulls');
+
 
         //fetch
+        pullFreq = {};
+        for (pull in pulls.data) {
+            pullFreq[pull['id']] = pull['frequency'];
+        }
 
         //process
 
@@ -68,6 +78,6 @@ export class BusFactorCalculator {
     totalBusScore(contributors: number, code_ownership: number, contributor_freq: number, pull_frequency: number): number {
 
         return contributors + code_ownership + contributor_freq + pull_frequency; //Not our actual calculation method just using it as a placeholder
-        
+
     }
 }
