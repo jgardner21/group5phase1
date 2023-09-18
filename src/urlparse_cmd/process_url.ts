@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { execSync } = require('child_process')
-import { cloneRepoLocally } from './local_clone';
+
 import { GithubAPIService } from './metric_calc/git_API_call'
 import { MetricScores } from './metric_calc/pkg_metric';
 //REALLY NEED TO MAKE THESE CONSISTANT BETWEEN IMPORT AND REQUIRE
@@ -94,7 +94,7 @@ export default async function get_metric_scores(filename: string) {
             if(github_fields != null) { //If they are null, just print out 0s and log error
                 if(await url_metrics.init_api_caller(github_fields.owner, github_fields.repo)) {
                     const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj);
-                    //cloneRepoLocally(url_metrics.repo_obj.clone_url);
+
                     //scores.getNumUsers(url_metrics.api_caller); //Need to initalize the approx num. of users for the repo
 
                     url_metrics.bus_factor = scores.getBusFactor()
@@ -116,7 +116,7 @@ export default async function get_metric_scores(filename: string) {
 
             if(await url_metrics.init_api_caller(owner_name, repo_name)) {
                 const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj);
-                //cloneRepoLocally(url_metrics.repo_obj.clone_url)
+
                 //scores.getNumUsers(url_metrics.api_caller); //Need to initalize the approx num. of users for the repo
                 url_metrics.bus_factor = scores.getBusFactor();
                 url_metrics.ramp_up = scores.getRampUp();
@@ -136,9 +136,7 @@ export default async function get_metric_scores(filename: string) {
         }
 
         url_metrics.print_scores();
-
     }
-
 
 }
 

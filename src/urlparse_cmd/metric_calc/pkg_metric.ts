@@ -13,18 +13,18 @@ export class MetricScores {
     license: LicenseCalculator;
     responiveness: ResponsiveMaintainerCalculator;
 
-    constructor(githubAPI: GithubAPIService, repo_obj: Object) {
+    constructor(githubAPI: GithubAPIService, repo_obj: any) {
         this.bus_factor = new BusFactorCalculator(githubAPI);
         this.ramp_up = new RampUpCalculator(githubAPI);
         this.correctness = new CorrectnessCalculator(githubAPI, repo_obj);
-        this.license = new LicenseCalculator(githubAPI);
+        this.license = new LicenseCalculator(githubAPI, repo_obj.clone_url);
         this.responiveness = new ResponsiveMaintainerCalculator(githubAPI);
 
     }
 
     async getNumUsers(githubAPI: GithubAPIService) {
-        this.num_users = (await githubAPI.fetchAPIdata('/traffic/clones')).count;
-        console.log(this.num_users)
+        //this.num_users = (await githubAPI.fetchAPIdata('/traffic/clones')).count;
+        //console.log(this.num_users)
     }
 
     getBusFactor(): number {

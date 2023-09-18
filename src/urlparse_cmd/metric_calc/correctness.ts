@@ -78,7 +78,7 @@ export class CorrectnessCalculator {
         if (this.num_stars < 5) {
             return 0;
         }
-        else if (this.num_stars > 800 || this.num_forks > 200) {
+        else if (this.num_stars > 800 || this.num_forks > 250) {
             return 1;
         }
         else {

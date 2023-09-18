@@ -1,10 +1,13 @@
 import { GithubAPIService } from './git_API_call';
+import { cloneRepoLocally } from './local_clone';
 
 export class LicenseCalculator {
     private githubAPI: GithubAPIService;
+    private url: string
 
-    constructor(githubAPI: GithubAPIService) {
+    constructor(githubAPI: GithubAPIService, url: string) {
         this.githubAPI = githubAPI;
+        this.url = url
     }
 
     // fetchLicenseScore(): number {
@@ -15,9 +18,9 @@ export class LicenseCalculator {
 
     getPkgLicense() { //Don't know what type this would return
         const acme_license = 'LGPL-2.1-only'
-
+        const clone_path = cloneRepoLocally(this.url)
         // pkg_license = pkg_license.license.spdx_id;
-
+        console.log(clone_path)
         return -1;
     }
 
