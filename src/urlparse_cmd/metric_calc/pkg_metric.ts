@@ -17,7 +17,7 @@ export class MetricScores {
         this.bus_factor = new BusFactorCalculator(githubAPI);
         this.ramp_up = new RampUpCalculator(githubAPI);
         this.correctness = new CorrectnessCalculator(githubAPI, repo_obj);
-        this.license = new LicenseCalculator(githubAPI, repo_obj.clone_url);
+        this.license = new LicenseCalculator(githubAPI, repo_obj.clone_url, repo_obj.name);
         this.responiveness = new ResponsiveMaintainerCalculator(githubAPI);
 
     }

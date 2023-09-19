@@ -2,6 +2,7 @@ const fs = require('fs');
 const { execSync } = require('child_process')
 
 import { GithubAPIService } from './metric_calc/git_API_call'
+import { cloneRepoLocally } from './metric_calc/local_clone';
 import { MetricScores } from './metric_calc/pkg_metric';
 //REALLY NEED TO MAKE THESE CONSISTANT BETWEEN IMPORT AND REQUIRE
 
@@ -29,7 +30,7 @@ class MetricScoreResults {
         //Gonna use a specialized call
         try {
             this.repo_obj = await this.api_caller.fetchAPIdata('')
-
+            console.log(this.repo_obj)
             return true
         }
         catch (err) {
@@ -117,7 +118,6 @@ export default async function get_metric_scores(filename: string) {
             if(await url_metrics.init_api_caller(owner_name, repo_name)) {
                 const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj);
 
-                //scores.getNumUsers(url_metrics.api_caller); //Need to initalize the approx num. of users for the repo
                 url_metrics.bus_factor = scores.getBusFactor();
                 url_metrics.ramp_up = scores.getRampUp();
                 url_metrics.license = scores.getLicense();

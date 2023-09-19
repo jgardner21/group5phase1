@@ -4,10 +4,12 @@ import { cloneRepoLocally } from './local_clone';
 export class LicenseCalculator {
     private githubAPI: GithubAPIService;
     private url: string
+    private pkg_name: string
 
-    constructor(githubAPI: GithubAPIService, url: string) {
+    constructor(githubAPI: GithubAPIService, url: string, pkg_name: string) {
         this.githubAPI = githubAPI;
         this.url = url
+        this.pkg_name = pkg_name
     }
 
     // fetchLicenseScore(): number {
@@ -16,11 +18,18 @@ export class LicenseCalculator {
     //     return overallLicenseScore;
     // }
 
-    getPkgLicense() { //Don't know what type this would return
+    async getPkgLicense() { //Don't know what type this would return
+
+        //Plan:
+        //Check the repo object
+        //If its not in there, clone it and check the package.json
+        //If that doesn't work either MAYBE try to find a license file in the repo
+        //Or just give up
+    
         const acme_license = 'LGPL-2.1-only'
-        const clone_path = cloneRepoLocally(this.url)
+        await cloneRepoLocally(this.url, this.pkg_name)
         // pkg_license = pkg_license.license.spdx_id;
-        console.log(clone_path)
+
         return -1;
     }
 
