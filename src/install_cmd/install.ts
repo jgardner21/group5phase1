@@ -1,7 +1,7 @@
 import { exec, ExecException } from 'child_process';
 
 
-function install_dependencies() {
+export default function install_dependencies() {
 
   const command = `npm install`;
 
@@ -20,5 +20,3 @@ function install_dependencies() {
 
   });
 }
-
-install_dependencies()
