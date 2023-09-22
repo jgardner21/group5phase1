@@ -60,7 +60,10 @@ export class MetricScores {
         //readmeLength: How well explained is it? Evaluate it roughly relative to the numDependancies
         //hasDocumentation: If this is true and we think there's a link to external documentation somewhere on it, we're assuming the readme is "perfect"
         
-        //Drawbacks of this approach: Num dependancies isn't actually a great analog for the complexity of using the package, but we don't have anything better to work with
+        //Drawbacks of this approach: 
+        //  Num dependancies isn't actually a great analog for the complexity of using the package, but we don't have anything better to work with
+        //  We assume all external documentation is good at explaining the functionality, which is definitely not always the case
+
         //In an ideal world, we would want to do something along the lines of "how much documentation is there relative to the amount of exported functions"
 
         const cloningScores: any = this.ramp_up.scanReadme();
@@ -91,7 +94,7 @@ export class MetricScores {
         //Repo_obj sometimes has the license but it's pretty inconsistant
         //If its not there either just give up
 
-        //We check compatability by uhhhhhhhhhhhhhhhhhhhhhhhhhh
+        //We check compatability by an array
 
         const pkg_license = this.license.getPkgLicense(this.packageJSON);
         if(pkg_license == '') { //If you couldn't find a license

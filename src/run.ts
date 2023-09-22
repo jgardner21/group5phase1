@@ -56,6 +56,8 @@ program
         }
         catch (err) {
             //Log error msg and print one to the console
+            console.log(err)
+            throw err
             process.exit(1)
         }
 

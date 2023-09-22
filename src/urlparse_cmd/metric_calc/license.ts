@@ -51,12 +51,13 @@ export class LicenseCalculator {
         //I THINK this is all of them based on google searching, it said that sometimes apache was compatible but not everywhere said that? It's very confusing
         //These are based off the following diagram that seemed to be the most commonly cited: https://en.wikipedia.org/wiki/License_compatibility#/media/File:Floss-license-slide-image.svg
         const compatible_licenses = ['MIT', 'BSD-3-Clause', 'Apache-2.0', 'MPL-2.0', 'LGPL-2.1-only', 'LGPL-2.1-or-later']
-
-        if(pkg_license in compatible_licenses) {
+        
+        if(compatible_licenses.includes(pkg_license)) {
             return 1;
         }
         else {
             return 0;
         }
+
     }
 }

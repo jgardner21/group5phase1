@@ -101,8 +101,35 @@ export class RampUpCalculator {
         console.log(`Has documentation: ${hasExtDocumentation}`)
         console.log(`Num of dependancies: ${numDependancies}`)
 
-        //Now just need to build formulas
-        
-        return -1;
+        //More dependencies = functionality of the code is more complex
+        //No matter what, we will make this decrease ramp-up somewhat
+        //However, the amount it decreases it by is dependant on the readme length or precense of documentation
+
+
+        var difficulty;
+        if(hasExtDocumentation) {
+            //We just assume documentation explains things well so readme length isn't really relevant
+            //All that matters from here is the complexity of the package itself
+            //We're going to assume that because trained engineers are using this,
+            //It should be pretty easy for them to understand a package with sufficient documentation
+
+            difficulty = numDependancies / 1500
+        }
+        else {
+            //Assume that functionality gets exponentially more complicated as more dependencies are needed
+            //The + 15 basically just makes it so that packages with 0 dependancies dont just get a free pass regardless of their documentation quality
+            difficulty = (numDependancies + 15)**2 / readmeLength
+
+        }
+
+        if(difficulty > 1) {
+            difficulty = 1
+        }
+        if(difficulty < 0.005) {
+            difficulty = 0
+            //Makes it possible to get a 1 without having 0 dependencies
+        }
+
+        return 1 - difficulty;
     }
 }
