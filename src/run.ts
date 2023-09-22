@@ -16,8 +16,15 @@ program
     .command("install") //Adds install command
     .description("Install all dependancies for package manager")
     .action(() => {
+        try {
+            install_dependancies() //Manage the command execution in another file
+            process.exit(0)
+        }
+        catch(err) {
+            //Log error msg
+            process.exit(1)
+        }
 
-        install_dependancies() //Manage the command execution in another file
 
     });
 
@@ -26,8 +33,14 @@ program
     .command("test") //Adds test command
     .description("Run test suite on codebase")
     .action(() => {
-
-        begin_tests()
+        try {
+            begin_tests()
+            process.exit(0)
+        }
+        catch(err) {
+            //Log error msg to the console
+            process.exit(1)
+        }
         
     });
 
@@ -35,12 +48,18 @@ program
     .version("0.0.1")
     .argument("<filename>", "Absolute file path of ASCII-encoded, newline delimited package URLs") //This will pick up on any command input that isnt install or test
     .description("Parse package URLs and provide metric scores for each package")
-    .action((filename: string) => {
+    .action(async (filename: string) => {
         
-        get_metric_scores(filename);
+        try {
+            await get_metric_scores(filename);
+            process.exit(0)
+        }
+        catch (err) {
+            //Log error msg and print one to the console
+            process.exit(1)
+        }
+
 
     });
-
-//Need to figure out how to exit 0 on success or non-zero on failure
 
 program.parse();

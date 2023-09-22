@@ -6,21 +6,67 @@ import fs from 'fs'
 
 export async function cloneRepoLocally(clone_url: string, git_name: string) {
     const temp_dir = path.join(os.tmpdir(), git_name) //Get temp directory for apps
-    console.log(temp_dir)
-    //console.log(clone_url)
 
-    await git.clone({ fs, http, dir: temp_dir, url: clone_url, onMessage: console.log })
-    const pkg_file = path.join(temp_dir, 'package.json')
-    fs.readFile(pkg_file, 'utf8', (err, data) => {
-        if(err) {
-            return console.error(err)
-        }
-        else {
-            console.log(data)
-        }
-    })
-    //Can't figure this out, for now just manually copied a repo into there and will set up lic with that
+    await git.clone({ fs, http, dir: temp_dir, url: clone_url })
 
-    //Assume this value would be the path to where the git repo now exists, which would require replacing "pokemon" with the actual package name
-    //const repo_path = path.join(temp_dir, 'pokemon')
+
+    return temp_dir
+
+}
+
+export function getPackageJSONFromClone(filepath: string) {
+    const pkg_file = path.join(filepath, 'package.json')
+    const pkg_json_str: string = fs.readFileSync(pkg_file, 'utf8')
+    return JSON.parse(pkg_json_str)
+}
+
+// export function getLicenseFromClone(filepath: string): string {
+//     const pkg_file = path.join(filepath, 'package.json')
+//     const pkg_json_str: string = fs.readFileSync(pkg_file, 'utf8')
+//     const pkg_json = JSON.parse(pkg_json_str)
+
+
+//     if(pkg_json.hasOwnProperty('license')) {
+//         return pkg_json.license
+//     }
+//     else {
+//         return '';
+//     }
+// }
+
+// export function getMainFromClone(filepath: string): string {
+//     const pkg_file = path.join(filepath, 'package.json')
+//     const pkg_json_str: string = fs.readFileSync(pkg_file, 'utf8')
+//     const pkg_json = JSON.parse(pkg_json_str)
+
+
+//     if(pkg_json.hasOwnProperty('license')) {
+//         return pkg_json.license
+//     }
+//     else {
+//         return '';
+//     }
+
+// }
+
+// export function getDependancyCountFromClone(filepath: string): string {
+
+    
+// }
+
+export function cleanupTempDir(filepath: string) {
+    //Deletes the cloned repo in our temp folder
+    try {
+        if (fs.existsSync(filepath)) {
+            // Remove the directory and its contents recursively
+            fs.rmSync(filepath, { recursive: true });
+            console.log(`Temporary directory deleted successfully.`);
+          } else {
+            console.log(`Temporary directory does not exist.`);
+          }
+    }
+    catch (err) {
+      console.error(`Error while deleting temporary directory: ${err}`);
+    }
+
 }
