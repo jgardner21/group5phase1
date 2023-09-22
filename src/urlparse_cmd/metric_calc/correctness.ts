@@ -33,9 +33,9 @@ export class CorrectnessCalculator {
         //0.9: 500
         //1.0: 750
 
-        //Proposed stars formula: ln(num stars/6) * 2/10 (derived experimentally by observing a curve for what fit best)
+        //Proposed stars formula: ln(num stars/6) * 2/10
         //Proposed forks formula: logbase2(num forks/10) * 2/10
-
+        //Derived by experimenting with graphs until I found one that fit relatively well
 
         if (this.num_stars < 5) {
             return 0;

@@ -62,6 +62,7 @@ export class RampUpCalculator {
     }
 
     //Dont think this is possible
+    
     // numFunctionsExported(packageJSON: any) {
     //     if(packageJSON.hasOwnProperty("main")) {
     //         var main_file = packageJSON.main
@@ -101,6 +102,7 @@ export class RampUpCalculator {
         console.log(`Num of dependancies: ${numDependancies}`)
 
         //Now just need to build formulas
+        
         return -1;
     }
 }
