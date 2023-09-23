@@ -7,7 +7,7 @@ export class CorrectnessCalculator {
 
     constructor(githubAPI: GithubAPIService, repo_obj: any) {
         this.githubAPI = githubAPI;
-        this.num_stars = repo_obj.stargazers_count;
+        this.num_stars = repo_obj.stargazers_count; //This is the same as the number of stars
         this.num_forks = repo_obj.forks;
     }
 
@@ -37,6 +37,7 @@ export class CorrectnessCalculator {
         //Proposed forks formula: logbase2(num forks/10) * 2/10
         //Derived by experimenting with graphs until I found one that fit relatively well
 
+        console.log("Successfully calculated correctness score")
         if (this.num_stars < 5) {
             return 0;
         }
@@ -47,6 +48,5 @@ export class CorrectnessCalculator {
             return Math.max((Math.log(this.num_stars / 6) * (1/5)), Math.log2(this.num_forks / 10) * (1/5)) //Returns the best indicator between these 2
         }
 
-        //return num_stars + num_forks + bug_reports;  //Not our actual calculation method just using it as a placeholder
     }
 }

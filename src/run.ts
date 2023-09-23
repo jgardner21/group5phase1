@@ -22,6 +22,7 @@ program
         }
         catch(err) {
             //Log error msg
+            console.log(err)
             process.exit(1)
         }
 
@@ -39,6 +40,7 @@ program
         }
         catch(err) {
             //Log error msg to the console
+            console.log(err)
             process.exit(1)
         }
         
@@ -57,7 +59,6 @@ program
         catch (err) {
             //Log error msg and print one to the console
             console.log(err)
-            throw err
             process.exit(1)
         }
 
