@@ -4,8 +4,7 @@
   "description": "Phase 1 implementation of our project for ECE461",
   "main": "run",
   "scripts": {
-    "build": "npx tsc",
-    "test": "./run /home/shay/a/dramiya/group5phase1/samples/SampleUrlFile.txt"
+    "build": "npx tsc"
   },
   "repository": {
     "type": "git",

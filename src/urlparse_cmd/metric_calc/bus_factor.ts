@@ -113,9 +113,6 @@ export class BusFactorCalculator {
         return approversMap;
     }
 
-
-    //Do the score calculation this in superclass instead
-
     totalBusScore(contributors: number, contributor_freq: number, codeOwners: number): number {
 
         return 0.2 * contributors + 0.8 * contributor_freq + 0.2 * codeOwners; 

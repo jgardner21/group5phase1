@@ -1,4 +1,5 @@
 import { Octokit } from "octokit";
+import logger from "../../logger";
 
 export class GithubAPIService {
     octokit: Octokit;
@@ -16,8 +17,10 @@ export class GithubAPIService {
         });
     }
     async fetchAPIdata(feature: string) {
+
         if(feature == '') { //To get the big repo object, we just do get /repos/owner/repo
             try {
+                logger.debug(`Calling GitHub API at endpoint /repos/${this.owner}/${this.repo}`)
                 const response = await this.octokit.request(`GET /repos/{owner}/{repo}`, { //Need this seperate because it doesn't have the slash at the end
                     owner: this.owner,
                     repo: this.repo,
@@ -28,13 +31,15 @@ export class GithubAPIService {
                 return response.data;
             }
             catch (error) {
-                console.error(`Attempted to call general repo endpoint`)
-                throw new Error(`Failed to get repo from GitHub API: ${error}`);
+                logger.error(`Failed to retrieve data /repos/${this.owner}/${this.repo} endpoint`)
+                logger.error(error)
+                throw error
             }
         }
         else {
 
             try {
+                logger.debug(`Calling GitHub API at endpoint /repos/${this.owner}/${this.repo}/${feature}`)
                 const response = await this.octokit.request(`GET /repos/{owner}/{repo}/${feature}`, {
                     owner: this.owner,
                     repo: this.repo,
@@ -46,8 +51,9 @@ export class GithubAPIService {
 
             }
             catch (error) {
-                console.error(`Attempted to call ${feature} endpoint`)
-                throw new Error(`Failed to fetch contributors: ${error}`);
+                logger.error(`Failed to retrieve data from /repos/${this.owner}/${this.repo}/${feature} endpoint`)
+                logger.error(error)
+                throw error
             }
 
         }
