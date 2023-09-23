@@ -59,30 +59,5 @@ export class GithubAPIService {
     }
 
 
-    // async getCodeOwnerShip() {
-
-    // }
-    // async fetchFrequencyOfContributors() {
-
-    // }
-    // async fetchNumStars() {
-
-    // }
-    // async fetchNumForks() {
-
-    // }
-    // async fetchBugReports() {
-
-    // }
-    // async fetchLicense() {
-
-    // }
-    // async fetchDocumentationData() {
-
-    // }
-    // async fetchSourceCodeData() {
-
-    // }
-
 
 }

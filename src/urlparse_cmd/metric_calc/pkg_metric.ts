@@ -27,19 +27,18 @@ export class MetricScores {
         this.packageJSON = getPackageJSONFromClone(this.local_clone)
     }
 
-    getBusFactor(): number {
+    async getBusFactor() {
 
         //Call each subfunction for calculating parts of bus factor
-        const num_contributors = this.bus_factor.calcContributorNum();
+        // const num_contributors = (await this.bus_factor.calcContributorNum());
 
-        const contributor_list = this.bus_factor.calcContributorList();
-
-
-        const pull_contrib_frequency = this.bus_factor.calcPullContributions();
+        const contributionCount = await this.bus_factor.numContributors();
+        const contributor_list = await this.bus_factor.calcConcentrationScore();
+        const codeowners = await this.bus_factor.fetchCodeOwners();
+        return this.bus_factor.totalBusScore(contributionCount, contributor_list, codeowners);
         //Do whatever math with it
-
         //
-        return this.bus_factor.totalBusScore(num_contributors, contributor_list, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
+        // return this.bus_factor.totalBusScore(num_contributors, contributor_list, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
     }
 
     getRampUp(): number {
@@ -101,10 +100,10 @@ export class MetricScores {
         return this.license.checkCompatability(pkg_license)
     }
 
-    getResponsiveness(): number {
-        const pull_response_time = this.responiveness.calcPullResponseTime();
-
-        const issue_response_time = this.responiveness.calcIssueResponseTime();
+    async getResponsiveness(): Promise<number> {
+        const pull_response_time = await this.responiveness.calcPullResponseTime();
+        const issue_response_time = await this.responiveness.calcIssueResponseTime();
+    // console.log(issue_response_time);
 
         return this.responiveness.totalResponsivenessScore(pull_response_time, issue_response_time);
     }
