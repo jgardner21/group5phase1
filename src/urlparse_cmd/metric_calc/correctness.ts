@@ -1,3 +1,4 @@
+import logger from '../../logger';
 import { GithubAPIService } from './git_API_call';
 
 export class CorrectnessCalculator {
@@ -37,7 +38,7 @@ export class CorrectnessCalculator {
         //Proposed forks formula: logbase2(num forks/10) * 2/10
         //Derived by experimenting with graphs until I found one that fit relatively well
 
-        console.log("Successfully calculated correctness score")
+        logger.info("Successfully calculated correctness score")
         if (this.num_stars < 5) {
             return 0;
         }

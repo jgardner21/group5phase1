@@ -1,3 +1,4 @@
+import logger from "../../logger";
 
 export class LicenseCalculator {
     private repo_obj: any;
@@ -18,20 +19,19 @@ export class LicenseCalculator {
 
         if(packageJSON.hasOwnProperty('license')) {
             pkg_license = packageJSON.license
-            console.log("Successfully retrieved license from the package.json file")
+            logger.debug("Successfully retrieved license from the package.json file")
         }
 
         else if(this.repo_obj.license != null && this.repo_obj.license.spdx_id != 'NOASSERTION') {
             //GitHub is very inconsistant with actually having licenses
             pkg_license = this.repo_obj.license.spdx_id;
-            console.log("Successfully retrieved license from the GitHub API")
+            logger.debug("Successfully retrieved license from the GitHub API")
         }
         else {
-            console.log("Failed to find valid license")
+            logger.error("Failed to find valid license for package")
             return ''
         }
-
-        console.log(pkg_license)
+        
         return pkg_license;
     }
 
@@ -43,7 +43,7 @@ export class LicenseCalculator {
         //These are based off the following diagram that seemed to be the most commonly cited: https://en.wikipedia.org/wiki/License_compatibility#/media/File:Floss-license-slide-image.svg
         const compatible_licenses = ['MIT', 'BSD-3-Clause', 'Apache-2.0', 'MPL-2.0', 'LGPL-2.1-only', 'LGPL-2.1-or-later']
         
-        console.log("Successfully calculated license score")
+        logger.info("Successfully calculated license score")
         if(compatible_licenses.includes(pkg_license)) {
             return 1;
         }

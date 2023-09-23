@@ -1,3 +1,4 @@
+import logger from '../../logger';
 import { GithubAPIService } from './git_API_call';
 
 export class Responsive_MaintainerCalculator {
@@ -38,6 +39,8 @@ export class Responsive_MaintainerCalculator {
         const avg = totalResponseTime / numPullRequests;
         // console.log("pull", avg, 1 - avg * (1 / 365));
         const score = 1 - avg * (1 / 365);
+
+        logger.debug(`Calculated average pull request response time as ${avg}`)
         if (score < 0) {
             return 0;
         } else {
@@ -77,6 +80,8 @@ export class Responsive_MaintainerCalculator {
         let avg = totalResponseTime / numIssueRequests;
         const score = 1 - avg * (1 / 365);
         // console.log("issue", avg, 1 - avg * (1 / 365));
+        logger.debug(`Calculated average issue response time as ${avg}`)
+
         if (score < 0) {
             return 0;
         } else {
@@ -95,7 +100,7 @@ export class Responsive_MaintainerCalculator {
     // calculate the score based on the average response times
 
     // combine the scores and return the total score
-
+        logger.info("Successfully calculated responsiveness score")
         return (avg_pull_response_time * pull_weight + avg_issue_response_time * issue_weight);
     }
 }

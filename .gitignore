@@ -6,8 +6,9 @@ logging.txt
 #Modules folder
 node_modules/
 
-cloned_repos/
-
 
 #Ignore everything in the /dist folder
 dist/
+
+#Autograder
+Part-1-CLI-Checker-main/
