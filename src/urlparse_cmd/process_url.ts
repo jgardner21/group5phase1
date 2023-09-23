@@ -117,11 +117,10 @@ export default async function get_metric_scores(filename: string) {
                         
                         const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path); //Initializes the class that gets each subscore
 
-                        //Only 2 of these actually need to be async
-                        url_metrics.bus_factor = scores.getBusFactor()
+                        url_metrics.bus_factor = await scores.getBusFactor()
                         url_metrics.ramp_up = scores.getRampUp()
                         url_metrics.license = scores.getLicense()
-                        url_metrics.maintainer = scores.getResponsiveness();
+                        url_metrics.maintainer = await scores.getResponsiveness();
                         url_metrics.correctness = scores.getCorrectness();
                         
                         //Once all 5 scores are calculated, update net score using our formula
@@ -134,7 +133,6 @@ export default async function get_metric_scores(filename: string) {
                         logger.error(`Failed to clone repo for ${url_list[i]} locally`)
                         logger.error(err)
                     }
-
                 }
             }
             else {
@@ -158,10 +156,10 @@ export default async function get_metric_scores(filename: string) {
 
                     const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path);
 
-                    url_metrics.bus_factor = scores.getBusFactor();
-                    url_metrics.ramp_up = await scores.getRampUp();
-                    url_metrics.license = await scores.getLicense();
-                    url_metrics.maintainer = scores.getResponsiveness();
+                    url_metrics.bus_factor = await scores.getBusFactor();
+                    url_metrics.ramp_up = scores.getRampUp();
+                    url_metrics.license = scores.getLicense();
+                    url_metrics.maintainer = await scores.getResponsiveness();
                     url_metrics.correctness = scores.getCorrectness();
                     url_metrics.calc_net_score()
                 }
