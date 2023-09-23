@@ -1,50 +1,47 @@
 import fs, { read } from 'fs';
 import path from 'path'
-import { GithubAPIService } from './git_API_call';
-import { dir } from 'console';
 
 export class RampUpCalculator {
-    private githubAPI: GithubAPIService;
+
     private clone_path: string;
 
-    constructor(githubAPI: GithubAPIService, clone_path: string) {
-        this.githubAPI = githubAPI;
+    constructor(clone_path: string) {
+        //This never uses the API
+        //Everything in here is got via the cloned API
         this.clone_path = clone_path;
     }
 
-    //Ideas:
-    //Look at actual length of readme file
-    //Look for any hyperlinks to a documentation website
-    //Look at the amount of functions available to use
-    //Look at the number of dependancies to estimate the complexity of whats going on under the hood
-
-    //Each returns a "score" out of 10 that goes into the final calc
     scanReadme(): Object {
-        const dir_contents = fs.readdirSync(this.clone_path)
+
+        const dir_contents = fs.readdirSync(this.clone_path) //Reads the directory contents and returns a list of filenames
 
 
-        const readme_file = dir_contents.find((file) => {
+        const readme_file = dir_contents.find((file) => { //Looks for a filename matching one of the 4 below, these were the most common formats I could find
             return (file.toLowerCase() === "readme.md" || file.toLowerCase() === "readme.markdown" || file.toLowerCase() === "readme.txt" || file.toLowerCase() === "readme")
         });
 
         if(readme_file) { //If one is found
-            const readme_contents: string = fs.readFileSync(path.join(this.clone_path, readme_file), 'utf8')
-            const readme_length = readme_contents.length
-            const hasDocs = this.scanForDocumentation(readme_contents)
+
+            const readme_contents: string = fs.readFileSync(path.join(this.clone_path, readme_file), 'utf8') //Get README contents
+            const readme_length = readme_contents.length //Get readme length in characters (in lines would technically be better but its no big deal)
+
+            const hasDocs = this.scanForDocumentation(readme_contents) //Use readme contents to scan for documentation
 
             //Idea is that a relatively shorter README is fine with external documentation
             
-            return { "readmeLength": readme_length, "docScore": hasDocs};
+            return { "readmeLength": readme_length, "docScore": hasDocs}; //Return both values at once
         }
         else {
-            console.log("Unable to find README file, assuming score of 0")
-            return { "readmeScore": 0, "docScore": 0};
+            console.error("Unable to find README file for Ramp-Up score, assuming score of 0")
+            return { "readmeScore": -1, "docScore": -1};
         }
-
     }
 
-    //Gonna call this once I've already extracted the readme contents, doesn't make sense to do it any other way
+    //Gonna call this once I've already extracted the readme contents
     scanForDocumentation(readme_contents: string) {
+        //Scans the readme for any hyperlinks to external documentation
+        //Does this by looking for hyperlinks with docs/documentation/wiki in the URL or in the displayed text
+        //Not perfect, sometimes misses documentation and has a few false positives but its not too frequent
 
         const doc_regex = /\[(.*?)\]\((.*?)\)/gi //Regex that matches a hyperlink (denoted by brackets) and a URL that comes after the brackets
         const matches = readme_contents.match(doc_regex);
@@ -87,6 +84,7 @@ export class RampUpCalculator {
     // }
 
     numOfDependancies(packageJSON: any) {
+        //Gets the number of dependencies of the package from the package.json file
         if(packageJSON.hasOwnProperty("dependencies")) {
             return Object.keys(packageJSON.dependencies).length;
         }
@@ -97,12 +95,40 @@ export class RampUpCalculator {
     }
 
     calcRampUpScore(readmeLength: number, hasExtDocumentation: number, numDependancies: number): number {
-        console.log(`Readme length: ${readmeLength}`)
-        console.log(`Has documentation: ${hasExtDocumentation}`)
-        console.log(`Num of dependancies: ${numDependancies}`)
+        // console.log(`Readme length: ${readmeLength}`)
+        // console.log(`Has documentation: ${hasExtDocumentation}`)
+        // console.log(`Num of dependancies: ${numDependancies}`)
 
-        //Now just need to build formulas
-        
-        return -1;
+        //More dependencies = functionality of the code is more complex
+        //No matter what, we will make this decrease ramp-up somewhat
+        //However, the amount it decreases it by is dependant on the readme length or precense of documentation
+
+
+        var difficulty;
+        if(hasExtDocumentation) {
+            //We just assume documentation explains things well so readme length isn't really relevant
+            //All that matters from here is the complexity of the package itself
+            //We're going to assume that because trained engineers are using this,
+            //It should be pretty easy for them to understand a package with sufficient documentation
+
+            difficulty = numDependancies / 1500
+        }
+        else {
+            //Assume that functionality gets exponentially more complicated as more dependencies are needed
+            //The + 15 basically just makes it so that packages with 0 dependancies dont just get a free pass regardless of their documentation quality
+            difficulty = (numDependancies + 15)**2 / readmeLength
+
+        }
+
+        if(difficulty > 1) {
+            difficulty = 1
+        }
+        if(difficulty < 0.005) {
+            difficulty = 0
+            //Makes it possible to get a 1 without having 0 dependencies
+        }
+
+        console.log("Successfully calculated ramp-up score")
+        return 1 - difficulty;
     }
 }

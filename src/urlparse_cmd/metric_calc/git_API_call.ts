@@ -1,7 +1,5 @@
 import { Octokit } from "octokit";
 
-// import { OctokitError } from '@octokit/types';
-
 export class GithubAPIService {
     octokit: Octokit;
     owner: string;
@@ -9,18 +7,18 @@ export class GithubAPIService {
 
 
     constructor(owner: string, repo: string) {
-        const gitkey = process.env.GITHUB_TOKEN;
+        const gitkey = process.env.GITHUB_TOKEN; //Gets the GitHub token from the environment variable file
         this.owner = owner;
         this.repo = repo;
 
-        this.octokit = new Octokit({
+        this.octokit = new Octokit({ //Initializes our API caller 
             auth: gitkey
         });
     }
     async fetchAPIdata(feature: string) {
         if(feature == '') { //To get the big repo object, we just do get /repos/owner/repo
             try {
-                const response = await this.octokit.request(`GET /repos/{owner}/{repo}`, {
+                const response = await this.octokit.request(`GET /repos/{owner}/{repo}`, { //Need this seperate because it doesn't have the slash at the end
                     owner: this.owner,
                     repo: this.repo,
                     headers: {
@@ -30,7 +28,7 @@ export class GithubAPIService {
                 return response.data;
             }
             catch (error) {
-                console.log(this.owner + "/" + this.repo)
+                console.error(`Attempted to call general repo endpoint`)
                 throw new Error(`Failed to get repo from GitHub API: ${error}`);
             }
         }
@@ -48,8 +46,7 @@ export class GithubAPIService {
 
             }
             catch (error) {
-                console.log(`Attempted to call ${feature} endpoint`)
-                console.log(this.owner + "/" + this.repo)
+                console.error(`Attempted to call ${feature} endpoint`)
                 throw new Error(`Failed to fetch contributors: ${error}`);
             }
 
@@ -57,7 +54,4 @@ export class GithubAPIService {
 
 
     }
-
-
-
 }

@@ -7,7 +7,6 @@ import { GithubAPIService } from './git_API_call';
 import { getPackageJSONFromClone } from "./local_clone";
 
 export class MetricScores {
-    num_users: number = 0; //Want this as a method of the superclass because it's important for calculating scores relative to the # of users
     bus_factor: BusFactorCalculator;
     ramp_up: RampUpCalculator;
     correctness: CorrectnessCalculator;
@@ -18,13 +17,17 @@ export class MetricScores {
     //We need it in multiple spots, so it makes sense to get it here
 
     constructor(githubAPI: GithubAPIService, repo_obj: any, local_clone: string) {
+        //Use any as type for objects because it becomes a massive pain if we don't
+
+        //Create instances of our 5 classes for calcing scores
         this.bus_factor = new BusFactorCalculator(githubAPI);
-        this.ramp_up = new RampUpCalculator(githubAPI, local_clone);
+        this.ramp_up = new RampUpCalculator(local_clone);
         this.correctness = new CorrectnessCalculator(githubAPI, repo_obj);
-        this.license = new LicenseCalculator(githubAPI, repo_obj, local_clone);
+        this.license = new LicenseCalculator(repo_obj);
         this.responiveness = new ResponsiveMaintainerCalculator(githubAPI);
+
         this.local_clone = local_clone
-        this.packageJSON = getPackageJSONFromClone(this.local_clone)
+        this.packageJSON = getPackageJSONFromClone(this.local_clone) //This is needed from the clone in a multiple spots so we do this here to avoid extracting it twice
     }
 
     async getBusFactor() {
@@ -59,15 +62,23 @@ export class MetricScores {
         //readmeLength: How well explained is it? Evaluate it roughly relative to the numDependancies
         //hasDocumentation: If this is true and we think there's a link to external documentation somewhere on it, we're assuming the readme is "perfect"
         
-        //Drawbacks of this approach: Num dependancies isn't actually a great analog for the complexity of using the package, but we don't have anything better to work with
+        //Drawbacks of this approach: 
+        //  Num dependancies isn't actually a great analog for the complexity of using the package, but we don't have anything better to work with
+        //  We assume all external documentation is good at explaining the functionality, which is definitely not always the case
+
         //In an ideal world, we would want to do something along the lines of "how much documentation is there relative to the amount of exported functions"
 
         const cloningScores: any = this.ramp_up.scanReadme();
-        const readmeLength = cloningScores.readmeLength;
-        const hasDocumentation = cloningScores.docScore;
+        if(cloningScores.readmeLength == -1) { //If it errored
+            console.error("Failed to calculate ramp up score")
+            return 0
+        }
+
+        const readmeLength: number = cloningScores.readmeLength;
+        const hasDocumentation: number = cloningScores.docScore;
 
         //const numFunctions = this.ramp_up.numFunctionsExported(this.packageJSON);
-        const numDependancies = this.ramp_up.numOfDependancies(this.packageJSON);
+        const numDependancies: number = this.ramp_up.numOfDependancies(this.packageJSON);
 
         return this.ramp_up.calcRampUpScore(readmeLength, hasDocumentation, numDependancies)
     }
@@ -90,10 +101,11 @@ export class MetricScores {
         //Repo_obj sometimes has the license but it's pretty inconsistant
         //If its not there either just give up
 
-        //We check compatability by uhhhhhhhhhhhhhhhhhhhhhhhhhh
+        //We check compatability by an array of compatible licenses
 
         const pkg_license = this.license.getPkgLicense(this.packageJSON);
         if(pkg_license == '') { //If you couldn't find a license
+            console.error("Failed to calculate license score")
             return 0
         }
 
