@@ -1,1 +1,26 @@
-./dist/run.js
+#!/bin/bash
+
+# Check if the second argument is provided
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <command> [arguments]"
+  exit 1
+fi
+
+command="$1"
+
+case "$command" in
+  "test")
+    # Run the test suite
+    node dist/run.js test
+    ;;
+
+  "install")
+    # Execute the install command
+    node dist/run.js install
+    ;;
+
+  *)
+    # If the command is not "test" or "install", assume it's a filename
+    node dist/run.js "$command"
+    ;;
+esac

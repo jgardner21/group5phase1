@@ -6,7 +6,7 @@
 import { Command } from 'commander';
 import get_metric_scores from './urlparse_cmd/process_url';
 import begin_tests from './test_cmd/test_cmd';
-import install_dependancies from './install_cmd/install';
+import install_dependencies from './install_cmd/install';
 
 const program = new Command();
 
@@ -16,7 +16,7 @@ program
     .description("Install all dependancies for package manager")
     .action(() => {
 
-        install_dependancies() //Manage the command execution in another file
+        install_dependencies() //Manage the command execution in another file
 
     });
 
