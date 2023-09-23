@@ -3,6 +3,7 @@ import git from 'isomorphic-git'
 import os from 'os'
 import http from 'isomorphic-git/http/node'
 import fs from 'fs'
+import logger from '../../logger'
 
 export async function cloneRepoLocally(clone_url: string, git_name: string) {
     const temp_dir = path.join(os.tmpdir(), git_name) //Get temp directory for apps
@@ -10,8 +11,7 @@ export async function cloneRepoLocally(clone_url: string, git_name: string) {
         await git.clone({ fs, http, dir: temp_dir, url: clone_url })
     }
     catch (err) {
-        console.error("Failed to clone GitHub repo locally")
-        console.error(err)
+        //Logging done at higher levels
         throw err
     }
 
@@ -33,14 +33,15 @@ export function cleanupTempDir(filepath: string) {
         if (fs.existsSync(filepath)) {
             // Remove the directory and its contents recursively
             fs.rmSync(filepath, { recursive: true });
-            console.log(`Temporary directory deleted successfully.`);
-          } else {
-            console.log(`Temporary directory does not exist.`);
-          }
+            logger.info(`Temporary directory at ${filepath} deleted successfully.`);
+        } 
+        else {
+            logger.error(`Temporary directory at ${filepath}  does not exist.`);
+        }
     }
     catch (err) {
-      console.error(`Error while deleting temporary directory: ${err}`);
-      console.log(err)
+      logger.error(`Error while deleting temporary directory`);
+      logger.error(err)
       throw err
     }
 

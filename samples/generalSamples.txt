@@ -1,3 +1,4 @@
 https://www.npmjs.com/package/tiny
 https://github.com/sindresorhus/pokemon
 https://github.com/readmeio/api
+https://github.com/winstonjs/winston

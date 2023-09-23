@@ -1,7 +1,7 @@
 #This is a local file I used to store my GitHub access token
 gitaccess.txt
 .env
-
+logging.txt
 
 #Modules folder
 node_modules/

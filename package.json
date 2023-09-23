@@ -27,6 +27,7 @@
     "dotenv": "^16.3.1",
     "isomorphic-git": "^1.24.5",
     "octokit": "^3.1.0",
-    "spdx-license-ids": "^3.0.13"
+    "spdx-license-ids": "^3.0.13",
+    "winston": "^3.10.0"
   }
 }

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { execSync } = require('child_process')
 
+import logger from '../logger';
 import { GithubAPIService } from './metric_calc/git_API_call'
 import { cleanupTempDir, cloneRepoLocally } from './metric_calc/local_clone';
 import { MetricScores } from './metric_calc/pkg_metric';
@@ -37,13 +38,13 @@ class MetricScoreResults {
             //Acts as a test run to make sure we can connect to the GitHub API properly
             //And gets us the repo_obj we need to use
 
-            console.log("Successfully connected to the GitHub API")
-            //console.log(this.repo_obj)
+            logger.info(`Successfully connected to the GitHub API for ${this.url}`)
+
             return true
         }
         catch (err) {
-            console.error("Failed to connect to GitHub API")
-            console.log(err)
+            logger.error(`Failed to connect to GitHub API for ${this.url}`)
+
             return false
         }
 
@@ -64,8 +65,7 @@ class MetricScoreResults {
 export default async function get_metric_scores(filename: string) {
 
     if(filename.charAt(0) != "/") { //Check if the input is an actual filepath
-        console.error("Invalid command");
-        return;
+        throw new Error("Invalid command given, command must be one of ./run (install | test | URL_FILE)")
     }
 
     //Step 1: Open file
@@ -75,8 +75,8 @@ export default async function get_metric_scores(filename: string) {
     }
     catch (err) { 
         //Step 1.1: Verify file exists, return error if it doesn't
-        console.error("Invalid file name, please provide the absolute file path of an ASCII-encoded, newline-delimited URLs");
-        return;
+        throw new Error("Invalid file name, please provide the absolute file path of an ASCII-encoded, newline-delimited URLs");
+
     }
 
     const url_list = (url_file.toString()).split('\n'); //Get each URL as an individual string in an array
@@ -99,39 +99,47 @@ export default async function get_metric_scores(filename: string) {
         if(is_npm_link != null && is_npm_link.groups !== undefined) { //Need the type guard or TS complains at me
             
             const pkg_name = is_npm_link.groups.pkg_name; //Gets the packagename from the URL
-            //console.log(pkg_name)
+            logger.debug(`Identified NPMJS package name as ${pkg_name}`)
             
             const github_fields = npm_to_github(pkg_name) //Converts the name of the pkg gotten from the npmjs link to a github link (if we can find one)
 
+
             if(github_fields != null) { //If they are null because we couldnt find a repo, just print out 0s and log error
 
+                logger.debug(`Converted npmjs link into GitHub URL https://github.com/${github_fields.owner}/${github_fields.repo}`)
                 if(await url_metrics.init_api_caller(github_fields.owner, github_fields.repo)) { //If the API can successfully be contacted
                     
                     try {
                         url_metrics.clone_path = await cloneRepoLocally(url_metrics.repo_obj.clone_url, url_metrics.repo_obj.name) //Clones the repo locally for analysis
-                        console.log("Successfully cloned repo locally")
+                        logger.info(`Successfully cloned repo for ${url_list[i]} locally`)
+                        logger.debug(`Repo clone located at ${url_metrics.clone_path}`)
+
+                        
+                        const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path); //Initializes the class that gets each subscore
+
+                        //Only 2 of these actually need to be async
+                        url_metrics.bus_factor = scores.getBusFactor()
+                        url_metrics.ramp_up = scores.getRampUp()
+                        url_metrics.license = scores.getLicense()
+                        url_metrics.maintainer = scores.getResponsiveness();
+                        url_metrics.correctness = scores.getCorrectness();
+                        
+                        //Once all 5 scores are calculated, update net score using our formula
+                        //If any errors occur within the subscores, we just set them to 0
+                        url_metrics.calc_net_score()
+                        logger.debug(`Finished calculating score for  ${url_list[i]}`)
                     }
                     catch (err) {
-                        console.error("Failed to clone repo locally")
-                        throw err //DO WE STILL WANT TO CLONE THE REPO LOCALLY
+                        //If the clone fails, we still want to print all 0s
+                        logger.error(`Failed to clone repo for ${url_list[i]} locally`)
+                        logger.error(err)
                     }
 
-                    const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path); //Initializes the class that gets each subscore
-
-                    //Only 2 of these actually need to be async
-                    url_metrics.bus_factor = scores.getBusFactor()
-                    url_metrics.ramp_up = scores.getRampUp()
-                    url_metrics.license = scores.getLicense()
-                    url_metrics.maintainer = scores.getResponsiveness();
-                    url_metrics.correctness = scores.getCorrectness();
-                    
-                    //Once all 5 scores are calculated, update net score using our formula
-                    //If any errors occur within the subscores, we just set them to 0
-                    url_metrics.calc_net_score()
                 }
             }
             else {
-                console.error("Failed to find GitHub link associated with package name")
+                logger.error(`Failed to find GitHub link associated with package name "${pkg_name}"`)
+
                 //Don't quit here, we still want to print out every score as 0
             } 
             
@@ -145,24 +153,29 @@ export default async function get_metric_scores(filename: string) {
             if(await url_metrics.init_api_caller(owner_name, repo_name)) { //Essentially the same as above minus a few steps
                 try {
                     url_metrics.clone_path = await cloneRepoLocally(url_metrics.repo_obj.clone_url, url_metrics.repo_obj.name)
+                    logger.info(`Successfully cloned repo for ${url_list[i]} locally`)
+                    logger.debug(`Repo clone located at ${url_metrics.clone_path}`)
+
+                    const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path);
+
+                    url_metrics.bus_factor = scores.getBusFactor();
+                    url_metrics.ramp_up = await scores.getRampUp();
+                    url_metrics.license = await scores.getLicense();
+                    url_metrics.maintainer = scores.getResponsiveness();
+                    url_metrics.correctness = scores.getCorrectness();
+                    url_metrics.calc_net_score()
                 }
                 catch (err) {
-                    throw err
+                    logger.error(`Failed to clone repo for ${url_list[i]} locally`)
+                    logger.error(err)
                 }
-                const scores = new MetricScores(url_metrics.api_caller, url_metrics.repo_obj, url_metrics.clone_path);
 
-                url_metrics.bus_factor = scores.getBusFactor();
-                url_metrics.ramp_up = await scores.getRampUp();
-                url_metrics.license = await scores.getLicense();
-                url_metrics.maintainer = scores.getResponsiveness();
-                url_metrics.correctness = scores.getCorrectness();
-                url_metrics.calc_net_score()
             } //Error msgs printed in init_api_caller
 
         }
         else {
             
-            console.error("Invalid link, link must be of the form https://www.npmjs.com/package/{name} or https://www.github.com/{repo}/{owner}")
+            logger.error("Invalid link, link must be of the form https://www.npmjs.com/package/{name} or https://www.github.com/{repo}/{owner}")
             
         }
 
@@ -179,11 +192,11 @@ function npm_to_github(pkg_name: string) {
     try {
         var git_link = execSync(npm_command, { stdio: 'pipe' }) //Not to be confused with the regex exec, this runs the command specified on the command line
         //Stdio pipe prevents error msgs from being printed
-        console.log("Successfully retrieved GitHub URL from NPM LINK")
+        logger.debug(`Successfully retrieved GitHub URL ${git_link} for package ${pkg_name}`)
     }
     catch(err) {
-        console.error("Package name invalid/not recognized by npm or didn't have a repo link in package.json")
-        console.error(err)
+        logger.error(`Package name ${pkg_name} not recognized by npm or doesn't have a repo link in package.json`)
+        logger.error(err)
         return null;
 
     }
@@ -197,15 +210,12 @@ function npm_to_github(pkg_name: string) {
 
         var repo_owner = match_github.groups.owner;
         var repo_name = match_github.groups.repo;
-        // console.log(git_link.toString())
-        // console.log(repo_owner)
-        // console.log(repo_name + "\n")
+
+        logger.debug(`Found repo = ${repo_name} and owner = ${repo_owner} for package ${pkg_name}`)
         return { owner: repo_owner, repo: repo_name }
     }
     else {
-        console.error("Could not find valid GitHub link for source code")
+        logger.error(`Unable to parse valid GitHub link from package.json for ${pkg_name}`)
         return null;
     }
-
-
 }

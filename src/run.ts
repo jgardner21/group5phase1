@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import get_metric_scores from './urlparse_cmd/process_url';
 import begin_tests from './test_cmd/test_cmd';
 import install_dependancies from './install_cmd/install';
+import logger from './logger'
 
 const program = new Command();
 
@@ -18,12 +19,14 @@ program
     .action(() => {
         try {
             install_dependancies() //Manage the command execution in another file
-            process.exit(0)
+            logger.debug("Exited ./run install successfully")
+            process.exitCode = 0
         }
         catch(err) {
             //Log error msg
-            console.log(err)
-            process.exit(1)
+            logger.debug("Command ./run install failed")
+            logger.error(err)
+            process.exitCode = 1
         }
 
 
@@ -36,12 +39,14 @@ program
     .action(() => {
         try {
             begin_tests()
-            process.exit(0)
+            logger.debug("Exited ./run test successfully")
+            process.exitCode = 0
         }
         catch(err) {
-            //Log error msg to the console
-            console.log(err)
-            process.exit(1)
+
+            logger.debug("Command ./run test failed")
+            logger.error(err)
+            process.exitCode = 1
         }
         
     });
@@ -54,15 +59,17 @@ program
         
         try {
             await get_metric_scores(filename);
-            process.exit(0)
+            logger.debug("Exited ./run URL_FILE successfully")
+            process.exitCode = 0
         }
         catch (err) {
-            //Log error msg and print one to the console
-            console.log(err)
-            process.exit(1)
+            logger.debug("Command ./run URL_FILE failed")
+            logger.error(err)
+            process.exitCode = 1
         }
 
 
     });
+
 
 program.parse();
