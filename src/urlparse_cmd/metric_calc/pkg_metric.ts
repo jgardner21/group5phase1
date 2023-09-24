@@ -45,12 +45,20 @@ export class MetricScores {
             logger.debug(`Found ${contributionCount} contributors`)
         }
         const contributor_list = await this.bus_factor.calcConcentrationScore();
-
+        if(contributor_list == -1) {
+            logger.error("Unable to calculate concentration score")
+            return 0
+        }
+        else {
+            logger.debug(`Determined contributor concentration score of ${contributor_list}`)
+        }
         const codeowners = await this.bus_factor.fetchCodeOwners();
+        if(codeowners == -1) {
+            logger.error("Failed to check for codeowners")
+            return 0
+        }
+
         return this.bus_factor.totalBusScore(contributionCount, contributor_list, codeowners);
-        //Do whatever math with it
-        //
-        // return this.bus_factor.totalBusScore(num_contributors, contributor_list, pull_contrib_frequency); //Not our actual calculation method just using it as a placeholder
     }
 
     getRampUp(): number {
@@ -123,7 +131,21 @@ export class MetricScores {
 
     async getResponsiveness(): Promise<number> {
         const pull_response_time = await this.responiveness.calcPullResponseTime();
+        if(pull_response_time == -1) {
+            logger.error("Failed to get pull response time")
+            return 0
+        }
+        else {
+            logger.debug(`Pull response time: ${pull_response_time}`)
+        }
         const issue_response_time = await this.responiveness.calcIssueResponseTime();
+        if(issue_response_time == -1) {
+            logger.error("Failed to get pull response time")
+            return 0
+        }
+        else {
+            logger.debug(`Issue response time: ${issue_response_time}`)
+        }
     // console.log(issue_response_time);
 
         return this.responiveness.totalResponsivenessScore(pull_response_time, issue_response_time);

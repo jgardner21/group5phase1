@@ -87,7 +87,12 @@ export class BusFactorCalculator {
      * @returns A number representing the concentration score, ranging from 0.4 to 1.
      */
     async calcConcentrationScore(): Promise<number> {
-        const contributors = await this.fetchContributors();
+        try {
+            var contributors = await this.fetchContributors();
+        }
+        catch {
+            return -1
+        }
         const totalContributions = contributors.reduce((sum: number, contributor: any) => sum + contributor.contributions, 0);
         const topContributors = contributors.slice(0, 1); // consider the top 3 contributors
         const topContributions = topContributors.reduce((sum: number, contributor: any) => sum + contributor.contributions, 0);
@@ -113,7 +118,12 @@ export class BusFactorCalculator {
      * @returns A Promise that resolves to a number. If the CODEOWNERS file exists, the number is 0. Otherwise, the number is 1.
      */
     async fetchCodeOwners(): Promise<number> {
-        const files = await this.githubAPI.fetchAPIdata('contents');
+        try {
+            var files = await this.githubAPI.fetchAPIdata('contents');
+        }
+        catch {
+            return -1
+        }
         // console.log(files);
         const codeOwnersFile = files.find((file: any) => file.filename === 'CODEOWNERS');
         if (codeOwnersFile) {
