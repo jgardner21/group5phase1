@@ -5,6 +5,7 @@ import { LicenseCalculator } from "./license";
 import { Responsive_MaintainerCalculator as ResponsiveMaintainerCalculator } from "./responisve_maintainer";
 import { GithubAPIService } from './git_API_call';
 import { getPackageJSONFromClone } from "./local_clone";
+import logger from "../../logger";
 
 export class MetricScores {
     bus_factor: BusFactorCalculator;
@@ -36,7 +37,15 @@ export class MetricScores {
         // const num_contributors = (await this.bus_factor.calcContributorNum());
 
         const contributionCount = await this.bus_factor.numContributors();
+        if(contributionCount == -1) {
+            logger.error("Failed to get number of contributors")
+            return 0
+        }
+        else {
+            logger.debug(`Found ${contributionCount} contributors`)
+        }
         const contributor_list = await this.bus_factor.calcConcentrationScore();
+
         const codeowners = await this.bus_factor.fetchCodeOwners();
         return this.bus_factor.totalBusScore(contributionCount, contributor_list, codeowners);
         //Do whatever math with it

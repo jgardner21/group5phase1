@@ -15,8 +15,6 @@ export async function cloneRepoLocally(clone_url: string, git_name: string) {
         throw err
     }
 
-
-
     return temp_dir
 
 }

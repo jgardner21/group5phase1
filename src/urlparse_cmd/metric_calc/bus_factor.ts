@@ -18,8 +18,14 @@ export class BusFactorCalculator {
      * @returns {Promise<any>} A promise that resolves with the contributors data.
      */
     async fetchContributors() {
-        const contributors = this.githubAPI.fetchAPIdata('contributors');
-        return contributors; //Placeholders
+        try {
+            const contributors = this.githubAPI.fetchAPIdata('contributors');
+            return contributors; //Placeholders
+        }
+        catch {
+            return []
+        }
+
 
     }
     //function which would take the contributorList
@@ -31,6 +37,9 @@ export class BusFactorCalculator {
      */
     async numContributors() {
         const contributors = await this.fetchContributors();
+        if(contributors.length = 0) { //If there is an error in the API call
+            return -1
+        }
         return contributors.length / 30;
     }
 
@@ -39,7 +48,12 @@ export class BusFactorCalculator {
      * @returns An array of numbers representing the frequency of contributions made by each contributor
      */
     async calcContributorList() {
-        const contributors = await this.fetchContributors();
+        try {
+            var contributors = await this.fetchContributors();
+        } 
+        catch {
+            return []
+        }
         let contributorFreq: any = [];
         for (let i = 0; i < contributors.length; i++) {
             const contributionCount = contributors[i].contributions;
