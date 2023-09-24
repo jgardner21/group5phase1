@@ -1,5 +1,6 @@
-import fs, { read } from 'fs';
+import fs from 'fs';
 import path from 'path'
+import logger from '../../logger';
 
 export class RampUpCalculator {
 
@@ -24,7 +25,7 @@ export class RampUpCalculator {
 
             const readme_contents: string = fs.readFileSync(path.join(this.clone_path, readme_file), 'utf8') //Get README contents
             const readme_length = readme_contents.length //Get readme length in characters (in lines would technically be better but its no big deal)
-
+            logger.debug(`Found README with length ${readme_file}`)
             const hasDocs = this.scanForDocumentation(readme_contents) //Use readme contents to scan for documentation
 
             //Idea is that a relatively shorter README is fine with external documentation
@@ -32,7 +33,7 @@ export class RampUpCalculator {
             return { "readmeLength": readme_length, "docScore": hasDocs}; //Return both values at once
         }
         else {
-            console.error("Unable to find README file for Ramp-Up score, assuming score of 0")
+            logger.error("Unable to find README file for Ramp-Up score, assuming score of 0")
             return { "readmeScore": -1, "docScore": -1};
         }
     }
@@ -51,6 +52,7 @@ export class RampUpCalculator {
             matches.forEach((match) => {
                 if (match.toLowerCase().includes('documentation') || match.toLowerCase().includes('docs') || match.toLowerCase().includes('wiki')) {
                     //If there's a documentation link, set it to one
+                    logger.debug(`Found external documentation link: ${match}`)
                     hasDocumentation = 1
                 }
             })
@@ -86,9 +88,11 @@ export class RampUpCalculator {
     numOfDependancies(packageJSON: any) {
         //Gets the number of dependencies of the package from the package.json file
         if(packageJSON.hasOwnProperty("dependencies")) {
+            logger.debug(`Found ${Object.keys(packageJSON.dependencies).length} dependancies for package ${packageJSON.name}`)
             return Object.keys(packageJSON.dependencies).length;
         }
         else {
+            logger.debug(`Did not find any dependancies for package ${packageJSON.name}`)
             return 0
         }
 
@@ -128,7 +132,7 @@ export class RampUpCalculator {
             //Makes it possible to get a 1 without having 0 dependencies
         }
 
-        console.log("Successfully calculated ramp-up score")
+        logger.info("Successfully calculated ramp-up score")
         return 1 - difficulty;
     }
 }

@@ -12,6 +12,7 @@ import logger from './logger'
 
 const program = new Command();
 
+
 program
     .version("0.0.1")
     .command("install") //Adds install command
@@ -24,7 +25,7 @@ program
         }
         catch(err) {
             //Log error msg
-            logger.debug("Command ./run install failed")
+            logger.error("Command ./run install failed")
             logger.error(err)
             process.exitCode = 1
         }
@@ -44,7 +45,7 @@ program
         }
         catch(err) {
 
-            logger.debug("Command ./run test failed")
+            logger.error("Command ./run test failed")
             logger.error(err)
             process.exitCode = 1
         }
@@ -63,7 +64,7 @@ program
             process.exitCode = 0
         }
         catch (err) {
-            logger.debug("Command ./run URL_FILE failed")
+            logger.error("Command ./run URL_FILE failed")
             logger.error(err)
             process.exitCode = 1
         }

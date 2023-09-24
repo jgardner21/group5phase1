@@ -1,5 +1,6 @@
 import { compileFunction } from 'vm';
 import { GithubAPIService } from './git_API_call';
+import logger from '../../logger';
 
 export class BusFactorCalculator {
 
@@ -144,7 +145,7 @@ export class BusFactorCalculator {
      * @returns The total bus factor score.
      */
     totalBusScore(contributors: number, contributor_freq: number, codeOwners: number): number {
-
+        logger.info("Successfully calculated bus factor score")
         return 0.2 * contributors + 0.8 * contributor_freq + 0.2 * codeOwners; 
 
     }

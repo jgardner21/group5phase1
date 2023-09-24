@@ -1,13 +1,9 @@
-const fs = require('fs');
-const { execSync } = require('child_process')
-
+import fs from 'fs';
+import { execSync } from 'child_process'
 import logger from '../logger';
 import { GithubAPIService } from './metric_calc/git_API_call'
 import { cleanupTempDir, cloneRepoLocally } from './metric_calc/local_clone';
 import { MetricScores } from './metric_calc/pkg_metric';
-//REALLY NEED TO MAKE THESE CONSISTANT BETWEEN IMPORT AND REQUIRE
-
-
 
 class MetricScoreResults {
     //General purpose class  
@@ -56,7 +52,7 @@ class MetricScoreResults {
 
     print_scores() {
         //TAs advised to technically not do it like this but whatever its fine
-        console.log(`{"URL":"${this.url}", "NET_SCORE":${this.net_score}, "RAMP_UP_SCORE":${this.ramp_up}, "CORRECTNESS_SCORE":${this.correctness}, "BUS_FACTOR_SCORE":${this.bus_factor}, "RESPONSIVE_MAINTAINER_SCORE":${this.maintainer}, "LICENSE_SCORE":${this.license}}`) //Not sure if doing it like this is ok?
+        console.log(`{"URL":"${this.url}", "NET_SCORE":${this.net_score.toFixed(2)}, "RAMP_UP_SCORE":${this.ramp_up.toFixed(2)}, "CORRECTNESS_SCORE":${this.correctness.toFixed(2)}, "BUS_FACTOR_SCORE":${this.bus_factor.toFixed(2)}, "RESPONSIVE_MAINTAINER_SCORE":${this.maintainer.toFixed(2)}, "LICENSE_SCORE":${this.license.toFixed(2)}}`) //Not sure if doing it like this is ok?
     }
 }
 
@@ -126,7 +122,9 @@ export default async function get_metric_scores(filename: string) {
                         //Once all 5 scores are calculated, update net score using our formula
                         //If any errors occur within the subscores, we just set them to 0
                         url_metrics.calc_net_score()
-                        logger.debug(`Finished calculating score for  ${url_list[i]}`)
+                        logger.debug(`Finished calculating score for ${url_list[i]}`)
+
+                        cleanupTempDir(url_metrics.clone_path) //Deletes the cloned directory from the temp folder to prevent clutter
                     }
                     catch (err) {
                         //If the clone fails, we still want to print all 0s
@@ -162,6 +160,9 @@ export default async function get_metric_scores(filename: string) {
                     url_metrics.maintainer = await scores.getResponsiveness();
                     url_metrics.correctness = scores.getCorrectness();
                     url_metrics.calc_net_score()
+                    logger.debug(`Finished calculating score for ${url_list[i]}`)
+
+                    cleanupTempDir(url_metrics.clone_path) //Deletes the cloned directory from the temp folder to prevent clutter
                 }
                 catch (err) {
                     logger.error(`Failed to clone repo for ${url_list[i]} locally`)
@@ -172,13 +173,11 @@ export default async function get_metric_scores(filename: string) {
 
         }
         else {
-            
             logger.error("Invalid link, link must be of the form https://www.npmjs.com/package/{name} or https://www.github.com/{repo}/{owner}")
-            
         }
 
         url_metrics.print_scores(); //Prints the NDJSON
-        cleanupTempDir(url_metrics.clone_path) //Deletes the cloned directory from the temp folder to prevent clutter
+
     }
 
 }
