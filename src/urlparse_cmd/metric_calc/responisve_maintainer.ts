@@ -15,7 +15,13 @@ export class Responsive_MaintainerCalculator {
      * @returns A promise that resolves to a number between 0 and 1.
      */
     async calcPullResponseTime(): Promise<number> {
-        const pullRequests = await this.githubAPI.fetchAPIdata('pulls');
+        try {
+            var pullRequests = await this.githubAPI.fetchAPIdata('pulls');
+        }
+        catch {
+            return -1
+        }
+
         let totalResponseTime = 0;
         let numPullRequests = 0;
         let maxResponseTime = 0;
@@ -60,7 +66,13 @@ export class Responsive_MaintainerCalculator {
      */
     async calcIssueResponseTime(): Promise<number> {
         //Same as above
-        const issue_response = await this.githubAPI.fetchAPIdata('issues');
+        try {
+            var issue_response = await this.githubAPI.fetchAPIdata('issues');
+        }
+        catch {
+            return -1
+        }
+
         let totalResponseTime = 0;
         let numIssueRequests = 0;
         let maxResponseTime = 0;
