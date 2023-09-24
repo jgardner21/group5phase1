@@ -3,6 +3,8 @@ gitaccess.txt
 .env
 logging.txt
 
+*.txt
+
 #Modules folder
 node_modules/
 

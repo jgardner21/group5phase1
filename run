@@ -17,7 +17,7 @@ case "$command" in
   "install")
     # Execute the install command
     node install/install.js
-    npm run build
+    npm run build >/dev/null 2>&1
     ;;
 
   *)
