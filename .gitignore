@@ -1,5 +1,7 @@
 #This is a local file I used to store my GitHub access token
 gitaccess.txt
+.env
+logging.txt
 
 #Modules folder
 node_modules/
@@ -7,3 +9,10 @@ node_modules/
 
 #Ignore everything in the /dist folder
 dist/
+
+#Autograder
+checker.py
+helper.py
+one-url.txt
+
+__pycache__/
