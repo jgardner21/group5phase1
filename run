@@ -16,7 +16,9 @@ case "$command" in
 
   "install")
     # Execute the install command
+    npm run build
     node dist/run.js install
+
     ;;
 
   *)

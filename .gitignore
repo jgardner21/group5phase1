@@ -10,6 +10,8 @@ node_modules/
 #Ignore everything in the /dist folder
 dist/
 
+#Coverage file
+coverage/
 #Autograder
 checker.py
 helper.py
