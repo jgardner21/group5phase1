@@ -8,6 +8,11 @@ export class Responsive_MaintainerCalculator {
     }
 
 
+    /**
+     * Calculates the average response time of pull requests and returns a score between 0 and 1.
+     * A score of 1 means that the maintainer is very responsive, while a score of 0 means that the maintainer is not responsive at all.
+     * @returns A promise that resolves to a number between 0 and 1.
+     */
     async calcPullResponseTime(): Promise<number> {
         const pullRequests = await this.githubAPI.fetchAPIdata('pulls');
         let totalResponseTime = 0;
@@ -46,6 +51,10 @@ export class Responsive_MaintainerCalculator {
     }
 
 
+    /**
+     * Calculates the average response time of issues and returns a score based on the average.
+     * @returns A Promise that resolves to a number representing the score.
+     */
     async calcIssueResponseTime(): Promise<number> {
         //Same as above
         const issue_response = await this.githubAPI.fetchAPIdata('issues');
@@ -89,6 +98,12 @@ export class Responsive_MaintainerCalculator {
 
     //Should add time since last commit to this
 
+    /**
+     * Calculates the total responsiveness score based on the average pull request response time and average issue response time.
+     * @param avg_pull_response_time The average response time for pull requests.
+     * @param avg_issue_response_time The average response time for issues.
+     * @returns The total responsiveness score.
+     */
     totalResponsivenessScore(avg_pull_response_time: number, avg_issue_response_time: number): number {
         const pull_weight = 0.6; // weight of pull request response time in the score
         const issue_weight = 0.4; // weight of issue response time in the score
