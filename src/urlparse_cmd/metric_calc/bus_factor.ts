@@ -160,7 +160,7 @@ export class BusFactorCalculator {
      */
     totalBusScore(contributors: number, contributor_freq: number, codeOwners: number): number {
         logger.info("Successfully calculated bus factor score")
-        return 0.2 * contributors + 0.8 * contributor_freq + 0.2 * codeOwners; 
+        return 0.2 * contributors + 0.6 * contributor_freq + 0.2 * codeOwners; 
 
     }
 }
