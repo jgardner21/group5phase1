@@ -4,6 +4,7 @@ import logger from '../logger';
 import { GithubAPIService } from './metric_calc/git_API_call'
 import { cleanupTempDir, cloneRepoLocally } from './metric_calc/local_clone';
 import { MetricScores } from './metric_calc/pkg_metric';
+import { url } from 'inspector';
 
 class MetricScoreResults {
     //General purpose class  
@@ -38,8 +39,15 @@ class MetricScoreResults {
 
             return true
         }
-        catch (err) {
+        catch (err: any) {
             logger.error(`Failed to connect to GitHub API for ${this.url}`)
+
+            if(err.status == 401) { //401 is an error code for invalid credentials
+                //Specifically want to throw the errer here because
+                //If the error is specifically due to a bad github token, we want to exit the entire process
+                logger.error("GitHub API denied access due to bad credentials, API token invalid")
+                throw err
+            }
 
             return false
         }
@@ -52,7 +60,7 @@ class MetricScoreResults {
 
     print_scores() {
         //TAs advised to technically not do it like this but whatever its fine
-        console.log(`{"URL":"${this.url}", "NET_SCORE":${this.net_score.toFixed(2)}, "RAMP_UP_SCORE":${this.ramp_up.toFixed(2)}, "CORRECTNESS_SCORE":${this.correctness.toFixed(2)}, "BUS_FACTOR_SCORE":${this.bus_factor.toFixed(2)}, "RESPONSIVE_MAINTAINER_SCORE":${this.maintainer.toFixed(2)}, "LICENSE_SCORE":${this.license.toFixed(2)}}`) //Not sure if doing it like this is ok?
+        console.log(`{"URL":"${this.url}", "NET_SCORE":${parseFloat(this.net_score.toFixed(5))}, "RAMP_UP_SCORE":${parseFloat(this.ramp_up.toFixed(5))}, "CORRECTNESS_SCORE":${parseFloat(this.correctness.toFixed(5))}, "BUS_FACTOR_SCORE":${parseFloat(this.bus_factor.toFixed(5))}, "RESPONSIVE_MAINTAINER_SCORE":${parseFloat(this.maintainer.toFixed(5))}, "LICENSE_SCORE":${parseFloat(this.license.toFixed(5))}}`) //Not sure if doing it like this is ok?
     }
 }
 
@@ -60,9 +68,9 @@ class MetricScoreResults {
 
 export default async function get_metric_scores(filename: string) {
 
-    if(filename.charAt(0) != "/") { //Check if the input is an actual filepath
-        throw new Error("Invalid command given, command must be one of ./run (install | test | URL_FILE)")
-    }
+    // if(filename.charAt(0) != "/") { //Check if the input is an actual filepath
+    //     throw new Error("Invalid command given, command must be one of ./run (install | test | URL_FILE)")
+    // }
 
     //Step 1: Open file
     try {
@@ -76,6 +84,10 @@ export default async function get_metric_scores(filename: string) {
     }
 
     const url_list = (url_file.toString()).split('\n'); //Get each URL as an individual string in an array
+    if(url_list[url_list.length - 1] == '') {
+        url_list.pop() //If there's a trailing entry, pop it
+    }
+
 
     const npm_regex_check = new RegExp("https://www.npmjs.com/package/(?<pkg_name>.+)")   //Matches a correctly formatted npmjs URL
 

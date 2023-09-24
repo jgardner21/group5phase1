@@ -11,4 +11,8 @@ node_modules/
 dist/
 
 #Autograder
-Part-1-CLI-Checker-main/
+checker.py
+helper.py
+one-url.txt
+
+__pycache__/

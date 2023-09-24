@@ -32,7 +32,7 @@ export class GithubAPIService {
             }
             catch (error) {
                 logger.error(`Failed to retrieve data /repos/${this.owner}/${this.repo} endpoint`)
-                logger.error(error)
+
                 throw error
             }
         }
