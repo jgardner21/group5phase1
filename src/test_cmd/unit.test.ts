@@ -6,7 +6,7 @@ const errorSpy = jest.spyOn(console, 'error');
 describe('get_metric function', () => {
   // Test case 1: Test when input is a valid URL
   it('should return a metric for a valid file', () => {
-    const file = '/home/shay/a/gardne97/461test/group5phase1/samples/SampleUrlFile.txt';
+    const file = '~/home/shay/a/gardne97/461test/group5phase1/samples/SampleUrlFile.txt';
     const metric = get_metric_scores(file);
     expect(metric).toBe(10);
   });
