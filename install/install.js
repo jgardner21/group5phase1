@@ -1,30 +1,30 @@
+const {exec, ExecException } = require('child_process');
+
 const command = `npm install`;
-const { spawn } = require('child_process');
 
-const npmInstall = spawn(command, { shell: true });
+exec(command, (error, stdout, stderr) => {
+if (error) {
+    console.error(`Error installing dependencies:`, error);
+} else {
+    // Count dependencies before filtering
+    const dependencyCount = (stdout.match(/added \d+ package/g) || []).length;
 
-let dependencyCount = 0;
+    const lines = stdout.split('\n');
+    const filteredLines = lines.filter(line => {
+    return !(
+        line.includes("up to date, audited") ||
+        line.includes("packages are looking for funding") ||
+        line.includes("found 0 vulnerabilities") ||
+        line.trim() === "run `npm fund` for details"
+    );
+    });
 
-npmInstall.stdout.on('data', (data) => {
-  const lines = data.toString().split('\n');
-  lines.forEach((line) => {
-    if (line.includes('added')) {
-      const match = line.match(/added (\d+) package/);
-      if (match) {
-        dependencyCount += parseInt(match[1], 10);
-      }
-    }
-  });
-});
-
-npmInstall.stderr.on('data', (data) => {
-  console.error(data.toString());
-});
-
-npmInstall.on('close', (code) => {
-  if (code === 0) {
+    // Display dependency count and filtered output
     console.log(`${dependencyCount} dependencies installed...`);
-  } else {
-    console.error(`Error installing dependencies with exit code ${code}`);
-  }
+    console.log(`${filteredLines.join('\n').trim()}`);
+}
+if (stderr) {
+    console.error(stderr);
+}
 });
+
