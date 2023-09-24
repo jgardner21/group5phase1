@@ -7,8 +7,9 @@ require('dotenv').config()
 import { Command } from 'commander';
 import get_metric_scores from './urlparse_cmd/process_url';
 import begin_tests from './test_cmd/test_cmd';
-import install_dependancies from './install_cmd/install';
+import install_dependecies from './install_cmd/install';
 import logger from './logger'
+
 
 const program = new Command();
 
@@ -19,7 +20,7 @@ program
     .description("Install all dependancies for package manager")
     .action(() => {
         try {
-            install_dependancies() //Manage the command execution in another file
+            install_dependencies() //Manage the command execution in another file
             logger.debug("Exited ./run install successfully")
             process.exitCode = 0
         }
@@ -29,7 +30,6 @@ program
             logger.error(err)
             process.exitCode = 1
         }
-
 
     });
 
