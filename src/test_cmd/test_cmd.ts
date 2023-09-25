@@ -1,7 +1,7 @@
 const { spawnSync } = require('child_process');
 
 export default function begin_tests() {
-  const jestResult = spawnSync('npx', ['jest', '--reporters=<rootDir>/MinimalReporter.js', '--coverage'], { stdio: 'inherit' });
+  const jestResult = spawnSync('npx', ['jest', /*'--reporters=<rootDir>/MinimalReporter.js',*/ '--coverage'], { stdio: 'inherit' });
 
   if (jestResult.error) {
     process.exit(1);

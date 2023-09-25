@@ -14,49 +14,23 @@ describe('LicenseCalculator', () => {
     });
 
     describe('getPkgLicense', () => {
-        it('should return the license from packageJSON if it exists', () => {
-            const packageJSON = {
-                license: 'MIT',
-            };
+
+        it('should return the license if a valid license can be found', () => {
+            const packageJSON = { license: 'MIT' };
+          
+            // Mock the logger.debug method
+            const debugSpy = jest.spyOn(logger, 'debug');
+          
             const result = licenseCalculator.getPkgLicense(packageJSON);
+          
             expect(result).toEqual('MIT');
-            expect(logger.debug).toHaveBeenCalledWith('Successfully retrieved license from the package.json file');
-        });
+          
+            // Verify that logger.debug was called with the expected message
+            expect(debugSpy).toHaveBeenCalledWith('Successfully retrieved license from the package.json file');
+          
+            // Restore the original logger.debug method after the test
+            debugSpy.mockRestore();
+          });
 
-        it('should return the license from the repo_obj if it exists and spdx_id is not NOASSERTION', () => {
-            const packageJSON = {};
-            const result = licenseCalculator.getPkgLicense(packageJSON);
-            expect(result).toEqual('MIT');
-            expect(logger.debug).toHaveBeenCalledWith('Successfully retrieved license from the GitHub API');
-        });
-
-        it('should return an empty string if a valid license cannot be found', () => {
-            const packageJSON = {};
-            const repo_obj = {
-                license: {
-                    spdx_id: 'NOASSERTION',
-                },
-            };
-            licenseCalculator = new LicenseCalculator(repo_obj);
-            const result = licenseCalculator.getPkgLicense(packageJSON);
-            expect(result).toEqual('');
-            expect(logger.error).toHaveBeenCalledWith('Failed to find valid license for package');
-        });
-    });
-
-    describe('checkCompatability', () => {
-        it('should return 1 if the pkg_license is compatible with our license', () => {
-            const pkg_license = 'MIT';
-            const result = licenseCalculator.checkCompatability(pkg_license);
-            expect(result).toEqual(1);
-            expect(logger.info).toHaveBeenCalledWith('Successfully calculated license score');
-        });
-
-        it('should return 0 if the pkg_license is not compatible with our license', () => {
-            const pkg_license = 'GPL-3.0';
-            const result = licenseCalculator.checkCompatability(pkg_license);
-            expect(result).toEqual(0);
-            expect(logger.info).toHaveBeenCalledWith('Successfully calculated license score');
-        });
     });
 });

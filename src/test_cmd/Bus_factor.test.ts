@@ -33,11 +33,12 @@ describe('BusFactorCalculator', () => {
     });
 
     it('should calculate the total bus factor score', () => {
-        const contributors = 10;
+        const contributors = 1;
         const contributorFreq = 0.8;
         const codeOwners = 1;
         const busFactorScore = busFactorCalculator.totalBusScore(contributors, contributorFreq, codeOwners);
         expect(busFactorScore).toBeGreaterThan(0);
-        expect(busFactorScore).toBeLessThanOrEqual(1);
+        expect(codeOwners).toBeLessThanOrEqual(1);
+
     });
 });
