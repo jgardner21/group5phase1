@@ -6,8 +6,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   reporters: [
-    //'<rootDir>/CustomReporter.js',
-    
+    'default'
   ],
   collectCoverage: true,
   coverageReporters: ["lcov"],
