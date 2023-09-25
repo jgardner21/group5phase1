@@ -9,6 +9,6 @@ module.exports = {
     'default'
   ],
   collectCoverage: true,
-  coverageReporters: ["lcov"],
+  coverageReporters: [],
 
 };
