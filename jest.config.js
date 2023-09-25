@@ -1,15 +1,13 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/dist/**/*.test.js'],
+  testMatch: ['<rootDir>/dist/**/*.test.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   reporters: [
-    //'<rootDir>/CustomReporter.js',
-    
+    'default'
   ],
   collectCoverage: true,
-  coverageReporters: ["lcov"],
-
+  coverageReporters: [],
 };
