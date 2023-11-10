@@ -1,0 +1,62 @@
+swagger: "2.0"
+info:
+  title: Module Registry API
+  description: API for managing package uploads, updates, ratings, and downloads
+  version: 1.0.0
+host: ec2-3-139-95-199.us-east-2.compute.amazonaws.com
+basePath: /
+schemes:
+  - http
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  /rate:
+    post:
+      summary: Rate a package
+      description: Rate a package based on a provided filename.
+      parameters:
+        - in: body
+          name: body
+          description: Object containing the filename to rate.
+          required: true
+          schema:
+            type: object
+            properties:
+              filename:
+                type: string
+                description: The name of the file containing package information.
+      responses:
+        200:
+          description: Packages rated successfully. The output is a JSON array of the packages' scores.
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                URL:
+                  type: string
+                  description: The GitHub URL of the package.
+                NET_SCORE:
+                  type: number
+                  description: The net score of the package.
+                RAMP_UP_SCORE:
+                  type: number
+                  description: The ramp-up score of the package.
+                CORRECTNESS_SCORE:
+                  type: number
+                  description: The correctness score of the package.
+                BUS_FACTOR_SCORE:
+                  type: number
+                  description: The bus-factor score of the package.
+                RESPONSIVE_MAINTAINER_SCORE:
+                  type: number
+                  description: The responsive maintainer score of the package.
+                LICENSE_SCORE:
+                  type: number
+                  description: The license score of the package.
+        400:
+          description: Invalid input.
+        500:
+          description: Internal server error or error in processing the request.

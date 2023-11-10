@@ -14,4 +14,5 @@ RUN npm run build
 
 RUN chmod +x ./run
 
-ENTRYPOINT ["./run"]
+EXPOSE 80
+CMD ["node", "server.js"]
