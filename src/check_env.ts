@@ -14,6 +14,6 @@ export default function checkEnvFile() {
         throw new Error("No LOG_FILE variable found in .env file")
     }
     else if(!fs.existsSync(process.env.LOG_FILE!)) {
-        throw new Error("Invalid log file path, unable to resolve")
+        throw new Error(`Invalid LOG_FILE path detected: '${process.env.LOG_FILE}'.`);
     }
 }
