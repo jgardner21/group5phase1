@@ -3,7 +3,7 @@ info:
   title: Module Registry API
   description: API for managing package uploads, updates, ratings, and downloads
   version: 1.0.0
-host: ec2-3-139-95-199.us-east-2.compute.amazonaws.com
+host: 3.139.95.199
 basePath: /
 schemes:
   - http

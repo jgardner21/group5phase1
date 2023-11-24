@@ -20,6 +20,6 @@ app.post('/rate', async (req, res) => {
 // Other endpoints TBA
 
 const port = 80;
-app.listen(port, () => {
-    logger.debug(`Server listening at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+    logger.debug(`Server listening on port ${port}`);
 });
