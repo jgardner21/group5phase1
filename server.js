@@ -12,7 +12,11 @@ const app = express();
 
 app.use(express.json());
 
+AWS.config.update({
+    region: 'us-east-2'
+});
 const s3 = new AWS.S3();
+const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
 
 // Define the API endpoint for uploading NPM packages
@@ -79,17 +83,36 @@ app.post('/package', async (req, res) => {
 
         // Upload to S3
         logger.debug("Uploading to S3");
-        s3.upload(params, function (err, data) {
+        s3.upload(params, async function (err, data) {
             if (err) {
                 logger.error("Error uploading to S3", err);
                 return res.status(500).send({message: "Error uploading to S3"});
             }
 
             logger.debug("Package uploaded successfully");
-            res.status(201).send({
-                message: "Package uploaded successfully",
-                s3Location: data.Location
-            });
+
+            // Prepare DynamoDB entry
+            const dynamoDBParams = {
+                TableName: 'S3Metadata',
+                Item: {
+                    id: metadata.ID,
+                    s3Key: params.Key
+                }
+            };
+
+            // Write metadata to DynamoDB
+            try {
+                await dynamoDB.put(dynamoDBParams).promise();
+                logger.debug("Metadata written to DynamoDB successfully");
+
+                res.status(201).send({
+                    message: "Package uploaded successfully",
+                    s3Location: data.Location
+                });
+            } catch (dbError) {
+                logger.error("Error writing to DynamoDB", dbError);
+                res.status(500).send({message: "Error writing metadata to DynamoDB"});
+            }
         });
 
     } catch (error) {
@@ -98,15 +121,21 @@ app.post('/package', async (req, res) => {
     }
 });
 
+// Define the API endpoint for retrieving packages
 app.get('/package/:id', async (req, res) => {
     try {
         const packageId = req.params.id;
-        logger.debug(`Received request to /package/${packageId} endpoint`);
 
-        // Fetch package data from S3
+        // Get the S3 key from DynamoDB
+        const s3Key = await getS3KeyFromDynamoDB(packageId);
+        if (!s3Key) {
+            return res.status(404).send({message: 'Package does not exist.'});
+        }
+
+        // Retrieve object from S3
         const s3Params = {
             Bucket: '461zips',
-            Key: `packages/${packageId}.zip`
+            Key: s3Key
         };
 
         logger.debug(`Fetching package data from S3 for package ${packageId}`);
@@ -133,9 +162,9 @@ app.get('/package/:id', async (req, res) => {
     } catch (error) {
         logger.error(`Error in GET /package/${req.params.id}`, error);
         if (error.code === 'NoSuchKey') {
-            res.status(404).send({ message: 'Package does not exist.' });
+            res.status(404).send({message: 'Package does not exist.'});
         } else {
-            res.status(500).send({ message: 'Internal Server Error' });
+            res.status(500).send({message: 'Internal Server Error'});
         }
     }
 });
@@ -151,6 +180,8 @@ app.post('/rate', async (req, res) => {
         res.status(500).send("An error occurred while rating the package.");
     }
 });
+
+// Other endpoints TBA
 
 const fetchPackageGitHubURL = async (zipBuffer) => {
     logger.debug("Starting fetchPackageGitHubURL function");
@@ -181,7 +212,17 @@ const fetchPackageGitHubURL = async (zipBuffer) => {
     return gitHubURL;
 };
 
-// Other endpoints TBA
+async function getS3KeyFromDynamoDB(id) {
+    const params = {
+        TableName: 'S3Metadata',
+        Key: {
+            id: id
+        }
+    };
+
+    const result = await dynamoDB.get(params).promise();
+    return result.Item ? result.Item.s3Key : null;
+}
 
 const port = 80;
 app.listen(port, '0.0.0.0', () => {
