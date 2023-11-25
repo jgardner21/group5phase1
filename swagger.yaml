@@ -33,6 +33,45 @@ paths:
           description: Package exists already.
         424:
           description: Package is not uploaded due to the disqualified rating.
+  /package/{id}:
+    get:
+      tags:
+        - package
+      summary: Interact with the package with this ID. (BASELINE)
+      description: Return this package.
+      operationId: PackageRetrieve
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of package to fetch
+          type: string
+      responses:
+        200:
+          description: Return the package. Content is required.
+          schema:
+            $ref: '#/definitions/Package'
+          examples:
+            application/json:
+              metadata:
+                Name: "Underscore"
+                Version: "1.0.0"
+                ID: "underscore"
+              data:
+                Content: "<Base64_encoded_content>"
+                URL: "https://github.com/jashkenas/underscore"
+                JSProgram: |
+                  if (process.argv.length === 7) {
+                    console.log('Success')
+                    process.exit(0)
+                  } else {
+                    console.log('Failed')
+                    process.exit(1)
+                  }
+        404:
+          description: Package does not exist.
   /rate:
     post:
       summary: Rate a package

@@ -10,22 +10,10 @@ const logger = require('./dist/logger.js').default;
 const app = express();
 
 
-
 app.use(express.json());
 
 const s3 = new AWS.S3();
 
-// Define the API endpoint for rating NPM packages
-app.post('/rate', async (req, res) => {
-    try {
-        const { filename } = req.body;
-        const scores = await get_metric_scores(filename);
-        res.json(scores);
-    } catch (err) {
-        logger.error("API call for rating failed", err);
-        res.status(500).send("An error occurred while rating the package.");
-    }
-});
 
 // Define the API endpoint for uploading NPM packages
 app.post('/package', async (req, res) => {
@@ -36,7 +24,7 @@ app.post('/package', async (req, res) => {
 
         if (!metadata || !metadata.Name || !metadata.Version || !metadata.ID) {
             logger.warn("Incomplete package metadata provided");
-            return res.status(400).send({ message: "Incomplete package metadata provided" });
+            return res.status(400).send({message: "Incomplete package metadata provided"});
         }
 
         let fileContent, tempFilePath;
@@ -67,15 +55,15 @@ app.post('/package', async (req, res) => {
                 fileContent = fs.readFileSync(tempFilePath);
             } catch (gitError) {
                 logger.error("Error during repository cloning or zipping", gitError);
-                return res.status(500).send({ message: "Error processing repository" });
+                return res.status(500).send({message: "Error processing repository"});
             } finally {
                 // Clean up
-                fs.rmdirSync(tempDir, { recursive: true });
+                fs.rmdirSync(tempDir, {recursive: true});
                 logger.debug("Cleaned up temporary files");
             }
         } else {
             logger.warn("No package content or URL provided");
-            return res.status(400).send({ message: "No package content or URL provided" });
+            return res.status(400).send({message: "No package content or URL provided"});
         }
 
         const params = {
@@ -91,10 +79,10 @@ app.post('/package', async (req, res) => {
 
         // Upload to S3
         logger.debug("Uploading to S3");
-        s3.upload(params, function(err, data) {
+        s3.upload(params, function (err, data) {
             if (err) {
                 logger.error("Error uploading to S3", err);
-                return res.status(500).send({ message: "Error uploading to S3" });
+                return res.status(500).send({message: "Error uploading to S3"});
             }
 
             logger.debug("Package uploaded successfully");
@@ -106,9 +94,93 @@ app.post('/package', async (req, res) => {
 
     } catch (error) {
         logger.error("Internal Server Error", error);
-        res.status(500).send({ message: "Internal Server Error" });
+        res.status(500).send({message: "Internal Server Error"});
     }
 });
+
+app.get('/package/:id', async (req, res) => {
+    try {
+        const packageId = req.params.id;
+        logger.debug(`Received request to /package/${packageId} endpoint`);
+
+        // Fetch package data from S3
+        const s3Params = {
+            Bucket: '461zips',
+            Key: `packages/${packageId}.zip`
+        };
+
+        logger.debug(`Fetching package data from S3 for package ${packageId}`);
+        // Retrieve object from S3
+        const data = await s3.getObject(s3Params).promise();
+        const packageContent = data.Body.toString('base64');
+
+        // Extract GitHub URL from package.json inside the zip
+        logger.debug(`Extracting GitHub URL from package.json inside the zip for package ${packageId}`);
+        const gitHubURL = await fetchPackageGitHubURL(data.Body);
+
+        // Prepare and send the package response
+        const response = {
+            data: {
+                Content: packageContent,
+                URL: gitHubURL,
+                JSProgram: "if (process.argv.length === 7) { console.log('Success'); process.exit(0); } else " +
+                    "{ console.log('Failed'); process.exit(1); }"
+            }
+        };
+
+        logger.debug(`Package retrieved successfully for package ${packageId}`);
+        res.status(200).json(response);
+    } catch (error) {
+        logger.error(`Error in GET /package/${req.params.id}`, error);
+        if (error.code === 'NoSuchKey') {
+            res.status(404).send({ message: 'Package does not exist.' });
+        } else {
+            res.status(500).send({ message: 'Internal Server Error' });
+        }
+    }
+});
+
+// Define the API endpoint for rating NPM packages
+app.post('/rate', async (req, res) => {
+    try {
+        const {filename} = req.body;
+        const scores = await get_metric_scores(filename);
+        res.json(scores);
+    } catch (err) {
+        logger.error("API call for rating failed", err);
+        res.status(500).send("An error occurred while rating the package.");
+    }
+});
+
+const fetchPackageGitHubURL = async (zipBuffer) => {
+    logger.debug("Starting fetchPackageGitHubURL function");
+    const zip = new AdmZip(zipBuffer);
+    const packageJsonEntry = zip.getEntry("package.json");
+
+    if (!packageJsonEntry) {
+        logger.warn("package.json not found in the zip file");
+        throw new Error("package.json not found in the zip file");
+    }
+
+    const packageJsonContent = JSON.parse(packageJsonEntry.getData().toString('utf-8'));
+    let gitHubURL = packageJsonContent.repository?.url || "URL not found";
+
+    // Trimming 'git+' prefix if present
+    if (gitHubURL.startsWith('git+')) {
+        logger.debug("Trimming 'git+' prefix from GitHub URL");
+        gitHubURL = gitHubURL.substring(4);
+    }
+
+    // Trimming '.git' suffix if present
+    if (gitHubURL.endsWith('.git')) {
+        logger.debug("Trimming '.git' suffix from GitHub URL");
+        gitHubURL = gitHubURL.slice(0, -4);
+    }
+
+    logger.debug(`Finished fetchPackageGitHubURL function, GitHub URL is ${gitHubURL}`);
+    return gitHubURL;
+};
+
 // Other endpoints TBA
 
 const port = 80;
