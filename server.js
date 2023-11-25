@@ -233,14 +233,42 @@ app.put('/package/:id', async (req, res) => {
 });
 
 // Define the API endpoint for rating NPM packages
-app.post('/rate', async (req, res) => {
+app.get('/package/:id/rate', async (req, res) => {
     try {
-        const {filename} = req.body;
-        const scores = await get_metric_scores(filename);
+        const packageId = req.params.id;
+
+        // Get the S3 key from DynamoDB
+        const s3Key = await getS3KeyFromDynamoDB(packageId);
+        if (!s3Key) {
+            return res.status(404).send({ message: 'Package does not exist.' });
+        }
+
+        // Retrieve object from S3
+        const s3Params = {
+            Bucket: '461zips',
+            Key: s3Key
+        };
+
+        logger.debug(`Fetching package data from S3 for package ${packageId}`);
+        const data = await s3.getObject(s3Params).promise();
+
+        // Extract GitHub URL from package.json inside the zip
+        logger.debug(`Extracting GitHub URL from package.json inside the zip for package ${packageId}`);
+        const gitHubURL = await fetchPackageGitHubURL(data.Body);
+
+        // Create a temporary file with the GitHub URL and pass it to get_metric_scores
+        const tempFilePath = path.join(os.tmpdir(), `${packageId}-urls.txt`);
+        fs.writeFileSync(tempFilePath, gitHubURL + '\n');
+
+        // Get metric scores
+        const scores = await get_metric_scores(tempFilePath);
         res.json(scores);
-    } catch (err) {
-        logger.error("API call for rating failed", err);
-        res.status(500).send("An error occurred while rating the package.");
+
+        // Cleanup temporary file
+        fs.unlinkSync(tempFilePath);
+    } catch (error) {
+        logger.error(`Error in GET /package/${req.params.id}/rate`, error);
+        res.status(500).send({ message: 'Internal Server Error' });
     }
 });
 

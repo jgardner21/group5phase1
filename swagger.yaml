@@ -94,8 +94,8 @@ paths:
         '404':
           description: Package does not exist.
       operationId: PackageUpdate
-  /rate:
-    post:
+  /package/{id}/rate:
+    get:
       summary: Rate a package
       description: Rate a package based on a provided filename.
       parameters:
@@ -140,6 +140,8 @@ paths:
                   description: The license score of the package.
         400:
           description: Invalid input.
+        404:
+          description: Package does not exist.
         500:
           description: Internal server error or error in processing the request.
 
