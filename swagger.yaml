@@ -72,6 +72,28 @@ paths:
                   }
         404:
           description: Package does not exist.
+    put:
+      summary: Update the content of the package. (BASELINE)
+      description: |
+        The name, version, and ID must match.
+        The package contents (from PackageData) will replace the previous contents.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: "Unique ID of the package to update."
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/Package'
+      responses:
+        '200':
+          description: Version is updated.
+        '404':
+          description: Package does not exist.
+      operationId: PackageUpdate
   /rate:
     post:
       summary: Rate a package

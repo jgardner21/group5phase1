@@ -169,6 +169,69 @@ app.get('/package/:id', async (req, res) => {
     }
 });
 
+// Define the API endpoint for updating packages
+app.put('/package/:id', async (req, res) => {
+    try {
+        const packageId = req.params.id;
+        const { metadata, data } = req.body;
+
+        // Validate request body
+        if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID) {
+            return res.status(400).send({ message: "Invalid request data" });
+        }
+
+        // Check if package ID matches with metadata ID
+        if (packageId !== metadata.ID) {
+            return res.status(400).send({ message: "Package ID mismatch" });
+        }
+
+        // Check if the package exists in DynamoDB
+        const dynamoDBGetParams = {
+            TableName: 'S3Metadata',
+            Key: { id: packageId }
+        };
+
+        const result = await dynamoDB.get(dynamoDBGetParams).promise();
+        if (!result.Item) {
+            return res.status(404).send({ message: 'Package does not exist.' });
+        }
+
+        // Update package in S3
+        const s3Key = `packages/${metadata.Name}-${metadata.Version}.zip`;
+        const updateParams = {
+            Bucket: '461zips',
+            Key: s3Key,
+            Body: Buffer.from(data.Content, 'base64'),
+            Metadata: {
+                'name': metadata.Name,
+                'version': metadata.Version,
+                'id': metadata.ID
+            }
+        };
+
+        await s3.upload(updateParams).promise();
+        logger.debug("Package updated in S3");
+
+        // Update DynamoDB entry
+        const dynamoDBUpdateParams = {
+            TableName: 'S3Metadata',
+            Key: { id: packageId },
+            UpdateExpression: "set s3Key = :s",
+            ExpressionAttributeValues: {
+                ":s": s3Key
+            }
+        };
+
+        await dynamoDB.update(dynamoDBUpdateParams).promise();
+        logger.debug("DynamoDB entry updated");
+
+        res.status(200).send({ message: "Package updated successfully" });
+    } catch (error) {
+        logger.error("Error in PUT /package/:id", error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+});
+
 // Define the API endpoint for rating NPM packages
 app.post('/rate', async (req, res) => {
     try {
