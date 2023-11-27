@@ -7,8 +7,25 @@ const express = require('express');
 const get_metric_scores = require('./dist/urlparse_cmd/process_url.js').default;
 const AWS = require('aws-sdk');
 const logger = require('./dist/logger.js').default;
+const cors = require('cors');
 const app = express();
 
+// CORS configuration for development and production
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins =
+            ['http://localhost:3000', 'http://ec2-18-222-159-163.us-east-2.compute.amazonaws.com'];
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true); // Allow
+        } else {
+            callback(new Error('Not allowed by CORS')); // Block
+        }
+    }
+};
+
+
+// Enable CORS with the specified options
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -173,27 +190,27 @@ app.get('/package/:id', async (req, res) => {
 app.put('/package/:id', async (req, res) => {
     try {
         const packageId = req.params.id;
-        const { metadata, data } = req.body;
+        const {metadata, data} = req.body;
 
         // Validate request body
         if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID) {
-            return res.status(400).send({ message: "Invalid request data" });
+            return res.status(400).send({message: "Invalid request data"});
         }
 
         // Check if package ID matches with metadata ID
         if (packageId !== metadata.ID) {
-            return res.status(400).send({ message: "Package ID mismatch" });
+            return res.status(400).send({message: "Package ID mismatch"});
         }
 
         // Check if the package exists in DynamoDB
         const dynamoDBGetParams = {
             TableName: 'S3Metadata',
-            Key: { id: packageId }
+            Key: {id: packageId}
         };
 
         const result = await dynamoDB.get(dynamoDBGetParams).promise();
         if (!result.Item) {
-            return res.status(404).send({ message: 'Package does not exist.' });
+            return res.status(404).send({message: 'Package does not exist.'});
         }
 
         // Update package in S3
@@ -215,7 +232,7 @@ app.put('/package/:id', async (req, res) => {
         // Update DynamoDB entry
         const dynamoDBUpdateParams = {
             TableName: 'S3Metadata',
-            Key: { id: packageId },
+            Key: {id: packageId},
             UpdateExpression: "set s3Key = :s",
             ExpressionAttributeValues: {
                 ":s": s3Key
@@ -225,10 +242,10 @@ app.put('/package/:id', async (req, res) => {
         await dynamoDB.update(dynamoDBUpdateParams).promise();
         logger.debug("DynamoDB entry updated");
 
-        res.status(200).send({ message: "Package updated successfully" });
+        res.status(200).send({message: "Package updated successfully"});
     } catch (error) {
         logger.error("Error in PUT /package/:id", error);
-        res.status(500).send({ message: "Internal Server Error" });
+        res.status(500).send({message: "Internal Server Error"});
     }
 });
 
@@ -240,7 +257,7 @@ app.get('/package/:id/rate', async (req, res) => {
         // Get the S3 key from DynamoDB
         const s3Key = await getS3KeyFromDynamoDB(packageId);
         if (!s3Key) {
-            return res.status(404).send({ message: 'Package does not exist.' });
+            return res.status(404).send({message: 'Package does not exist.'});
         }
 
         // Retrieve object from S3
@@ -268,7 +285,7 @@ app.get('/package/:id/rate', async (req, res) => {
         fs.unlinkSync(tempFilePath);
     } catch (error) {
         logger.error(`Error in GET /package/${req.params.id}/rate`, error);
-        res.status(500).send({ message: 'Internal Server Error' });
+        res.status(500).send({message: 'Internal Server Error'});
     }
 });
 
