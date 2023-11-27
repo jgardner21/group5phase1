@@ -302,18 +302,30 @@ const fetchPackageGitHubURL = async (zipBuffer) => {
     }
 
     const packageJsonContent = JSON.parse(packageJsonEntry.getData().toString('utf-8'));
-    let gitHubURL = packageJsonContent.repository?.url || "URL not found";
 
-    // Trimming 'git+' prefix if present
-    if (gitHubURL.startsWith('git+')) {
-        logger.debug("Trimming 'git+' prefix from GitHub URL");
-        gitHubURL = gitHubURL.substring(4);
-    }
+    let gitHubURL;
+    const repository = packageJsonContent.repository;
 
-    // Trimming '.git' suffix if present
-    if (gitHubURL.endsWith('.git')) {
-        logger.debug("Trimming '.git' suffix from GitHub URL");
-        gitHubURL = gitHubURL.slice(0, -4);
+    if (typeof repository === 'string') {
+        // Handle string format
+        gitHubURL = `https://github.com/${repository}`;
+    } else if (repository && repository.url) {
+        // Handle object format with URL
+        gitHubURL = repository.url;
+
+        // Trimming 'git+' prefix if present
+        if (gitHubURL.startsWith('git+')) {
+            logger.debug("Trimming 'git+' prefix from GitHub URL");
+            gitHubURL = gitHubURL.substring(4);
+        }
+
+        // Trimming '.git' suffix if present
+        if (gitHubURL.endsWith('.git')) {
+            logger.debug("Trimming '.git' suffix from GitHub URL");
+            gitHubURL = gitHubURL.slice(0, -4);
+        }
+    } else {
+        gitHubURL = "URL not found";
     }
 
     logger.debug(`Finished fetchPackageGitHubURL function, GitHub URL is ${gitHubURL}`);
