@@ -156,9 +156,15 @@ app.get('/package/:id', async (req, res) => {
         };
 
         logger.debug(`Fetching package data from S3 for package ${packageId}`);
-        // Retrieve object from S3
         const data = await s3.getObject(s3Params).promise();
         const packageContent = data.Body.toString('base64');
+
+        // Extract metadata from S3 object
+        const metadata = {
+            Name: data.Metadata['name'],
+            Version: data.Metadata['version'],
+            ID: data.Metadata['id']
+        };
 
         // Extract GitHub URL from package.json inside the zip
         logger.debug(`Extracting GitHub URL from package.json inside the zip for package ${packageId}`);
@@ -166,6 +172,7 @@ app.get('/package/:id', async (req, res) => {
 
         // Prepare and send the package response
         const response = {
+            metadata: metadata,
             data: {
                 Content: packageContent,
                 URL: gitHubURL,
