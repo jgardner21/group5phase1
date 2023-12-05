@@ -296,7 +296,69 @@ app.get('/package/:id/rate', async (req, res) => {
     }
 });
 
+// Define the API endpoint for deleting NPM packages
+app.delete('/reset', async (req, res) => {
+    try {
+        logger.info("Received request to /reset endpoint. Emptying S3 bucket...");
+        const listParams = { Bucket: '461zips' };
+        const listedObjects = await s3.listObjectsV2(listParams).promise();
+
+        logger.debug("Number of objects in the bucket: " + listedObjects.Contents.length);
+        if (listedObjects.Contents.length === 0) return;
+
+        const deleteParams = {
+            Bucket: '461zips',
+            Delete: { Objects: [] }
+        };
+
+        listedObjects.Contents.forEach(({ Key }) => {
+            deleteParams.Delete.Objects.push({ Key });
+        });
+
+        await s3.deleteObjects(deleteParams).promise();
+
+        if (listedObjects.IsTruncated) await emptyS3Bucket();
+
+       logger.debug("S3 bucket emptied successfully. Deleting DynamoDB entries...");
+        const scanResult = await dynamoDB.scan({ TableName: 'S3Metadata' }).promise();
+
+        for (const item of scanResult.Items) {
+            await dynamoDB.delete({
+                TableName: 'S3Metadata',
+                Key: { id: item.id }
+            }).promise();
+        }
+
+        logger.debug("DynamoDB entries deleted successfully. Reset complete.");
+        res.status(200).send({ message: "Registry is reset." });
+    } catch (error) {
+        logger.error("Error resetting registry", error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+});
+
+
+
 // Other endpoints TBA
+
+async function emptyS3Bucket() {
+    const listedObjects = await s3.listObjectsV2({ Bucket: '461zips' }).promise();
+
+    if (listedObjects.Contents.length === 0) return;
+
+    const deleteParams = {
+        Bucket: '461zips',
+        Delete: { Objects: [] }
+    };
+
+    listedObjects.Contents.forEach(({ Key }) => {
+        deleteParams.Delete.Objects.push({ Key });
+    });
+
+    await s3.deleteObjects(deleteParams).promise();
+
+    if (listedObjects.IsTruncated) await emptyS3Bucket();
+}
 
 const fetchPackageGitHubURL = async (zipBuffer) => {
     logger.debug("Starting fetchPackageGitHubURL function");

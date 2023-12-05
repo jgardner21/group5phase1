@@ -94,6 +94,20 @@ paths:
         '404':
           description: Package does not exist.
       operationId: PackageUpdate
+  /reset:
+    delete:
+      summary: Reset the registry
+      description: Reset the registry to a system default state
+      operationId: resetRegistry
+      responses:
+        200:
+          description: Registry is reset
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Registry is reset."
   /package/{id}/rate:
     get:
       summary: Rate a package
