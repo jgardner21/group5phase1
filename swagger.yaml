@@ -94,6 +94,47 @@ paths:
         '404':
           description: Package does not exist.
       operationId: PackageUpdate
+  /packages:
+    post:
+      summary: Get the packages from the registry.
+      description: |
+        Get any packages fitting the query.
+        Search for packages satisfying the indicated query.
+        If you want to enumerate all packages, provide an array with a single PackageQuery whose name is "*".
+        The response is paginated; the response header includes the offset to use in the next query.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Package queries to search for.
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PackageQuery'
+        - in: query
+          name: offset
+          description: Provide this for pagination. If not provided, returns the first page of results.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: List of packages
+          headers:
+            offset:
+              type: string
+              description: The offset to use in the next query for pagination.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PackageMetadata'
+        '400':
+          description: There is a missing field(s) in the PackageQuery/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.
+        '413':
+          description: Too many packages returned.
   /reset:
     delete:
       summary: Reset the registry

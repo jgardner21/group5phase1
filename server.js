@@ -113,7 +113,10 @@ app.post('/package', async (req, res) => {
                 TableName: 'S3Metadata',
                 Item: {
                     id: metadata.ID,
-                    s3Key: params.Key
+                    s3Key: params.Key,
+                    name: metadata.Name,
+                    version: metadata.Version
+
                 }
             };
 
@@ -293,6 +296,57 @@ app.get('/package/:id/rate', async (req, res) => {
     } catch (error) {
         logger.error(`Error in GET /package/${req.params.id}/rate`, error);
         res.status(500).send({message: 'Internal Server Error'});
+    }
+});
+
+// Define the API endpoint for listing NPM packages in the directory
+app.post('/packages', async (req, res) => {
+    try {
+        logger.info("Received request to /packages endpoint");
+        const packageQueries = req.body;
+        const offset = req.query.offset ? JSON.parse(req.query.offset) : null;
+        const limit = 55; // Adjust as per requirement
+
+        logger.debug("Validating request body");
+        if (!Array.isArray(packageQueries) || packageQueries.length === 0) {
+            return res.status(400).send({ message: "Invalid request body" });
+        }
+
+        const results = [];
+        let lastEvaluatedKey = offset;
+
+        for (const query of packageQueries) {
+            const scanParams = {
+                TableName: "S3Metadata",
+                Limit: limit,
+                ExclusiveStartKey: lastEvaluatedKey,
+                FilterExpression: "Name = :nameVal",
+                ExpressionAttributeValues: { ":nameVal": query.Name }
+            };
+
+            if (query.Version) {
+                scanParams.FilterExpression += " and Version = :versionVal";
+                scanParams.ExpressionAttributeValues[":versionVal"] = query.Version;
+            }
+
+            logger.debug(`Scanning DynamoDB with parameters: ${JSON.stringify(scanParams)}`);
+            const queryResult = await dynamoDB.scan(scanParams).promise();
+            results.push(...queryResult.Items.map(item => ({
+                Name: item.Name,
+                Version: item.Version,
+                ID: item.ID
+            })));
+            lastEvaluatedKey = queryResult.LastEvaluatedKey;
+            if (results.length >= limit) {
+                break; // Stop if the limit is reached
+            }
+        }
+
+        res.header('offset', lastEvaluatedKey ? JSON.stringify(lastEvaluatedKey) : null);
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error in POST /packages:', error);
+        res.status(500).send({ message: 'Internal Server Error' });
     }
 });
 
