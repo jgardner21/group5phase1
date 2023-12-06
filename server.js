@@ -4,11 +4,14 @@ const AdmZip = require('adm-zip');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const bodyParser = require('body-parser');
 const get_metric_scores = require('./dist/urlparse_cmd/process_url.js').default;
 const AWS = require('aws-sdk');
 const logger = require('./dist/logger.js').default;
 const cors = require('cors');
 const app = express();
+const { v4: uuidv4 } = require('uuid');
+
 
 // CORS configuration for development and production
 const corsOptions = {
@@ -23,6 +26,9 @@ const corsOptions = {
     }
 };
 
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+
 
 // Enable CORS with the specified options
 app.use(cors(corsOptions));
@@ -36,74 +42,82 @@ const s3 = new AWS.S3();
 const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
 
-// Define the API endpoint for uploading NPM packages
+/**
+ * Define the API endpoint for uploading packages
+ *
+ * TODO: Implement rating check
+ * TODO: Error handling for missing json
+ */
 app.post('/package', async (req, res) => {
     try {
         logger.debug("Received request to /package endpoint");
+        let fileContent, tempDir, repoPath, zip, packageJson, packageName, packageVersion;
 
-        const metadata = req.body.metadata;
-
-        if (!metadata || !metadata.Name || !metadata.Version || !metadata.ID) {
-            logger.warn("Incomplete package metadata provided");
-            return res.status(400).send({message: "Incomplete package metadata provided"});
+        // Check if both Content and URL are provided
+        if (req.body.Content && req.body.URL) {
+            logger.warn("Both Content and URL provided");
+            return res.status(400).send({ message: "Both Content and URL cannot be set" });
         }
-
-        let fileContent, tempFilePath;
 
         if (req.body.Content) {
             logger.debug("Handling direct content upload");
             fileContent = Buffer.from(req.body.Content, 'base64');
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'package-'));
+            fs.writeFileSync(path.join(tempDir, 'package.zip'), fileContent);
+
+            zip = new AdmZip(path.join(tempDir, 'package.zip'));
+            repoPath = path.join(tempDir, 'repo');
+            zip.extractAllTo(repoPath, true);
         } else if (req.body.URL) {
             logger.debug("Handling URL upload");
             const packageURL = req.body.URL;
-
-            // Temporary directory for cloning
-            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'package-'));
-            const repoPath = path.join(tempDir, metadata.Name);
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'package-'));
+            repoPath = path.join(tempDir, 'repo');
             const git = simpleGit();
-
-            try {
-                logger.debug(`Cloning repository from ${packageURL}`);
-                await git.clone(packageURL, repoPath);
-
-                // Create a zip file from the downloaded repository
-                const zip = new AdmZip();
-                zip.addLocalFolder(repoPath);
-                tempFilePath = path.join(tempDir, `${metadata.Name}.zip`);
-                zip.writeZip(tempFilePath);
-                logger.debug(`Created zip file at ${tempFilePath}`);
-
-                fileContent = fs.readFileSync(tempFilePath);
-            } catch (gitError) {
-                logger.error("Error during repository cloning or zipping", gitError);
-                return res.status(500).send({message: "Error processing repository"});
-            } finally {
-                // Clean up
-                fs.rmdirSync(tempDir, {recursive: true});
-                logger.debug("Cleaned up temporary files");
-            }
+            await git.clone(packageURL, repoPath);
         } else {
             logger.warn("No package content or URL provided");
-            return res.status(400).send({message: "No package content or URL provided"});
+            return res.status(400).send({ message: "No package content or URL provided" });
         }
 
-        const params = {
+        // Extract package name and version from package.json
+        packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
+        packageName = packageJson.name;
+        packageVersion = packageJson.version;
+
+        // Check if the package already exists
+        const packageExists = await checkIfPackageExists(packageName, packageVersion);
+        if (packageExists) {
+            logger.warn("Package already exists");
+            return res.status(409).send({ message: "Package already exists" });
+        }
+
+        const packageId = uuidv4();
+
+        // Create a zip file from the extracted content
+        zip = new AdmZip();
+        zip.addLocalFolder(repoPath);
+        const finalZipPath = path.join(tempDir, `${packageName}-${packageVersion}.zip`);
+        zip.writeZip(finalZipPath);
+        fileContent = fs.readFileSync(finalZipPath);
+
+        const s3Params = {
             Bucket: '461zips',
-            Key: `packages/${metadata.Name}-${metadata.Version}.zip`,
+            Key: `packages/${packageName}-${packageVersion}.zip`,
             Body: fileContent,
             Metadata: {
-                'name': metadata.Name,
-                'version': metadata.Version,
-                'id': metadata.ID
+                'name': packageName,
+                'version': packageVersion,
+                'id': packageId
             }
         };
 
         // Upload to S3
         logger.debug("Uploading to S3");
-        s3.upload(params, async function (err, data) {
+        s3.upload(s3Params, async function (err, data) {
             if (err) {
                 logger.error("Error uploading to S3", err);
-                return res.status(500).send({message: "Error uploading to S3"});
+                return res.status(500).send({ message: "Error uploading to S3" });
             }
 
             logger.debug("Package uploaded successfully");
@@ -112,11 +126,10 @@ app.post('/package', async (req, res) => {
             const dynamoDBParams = {
                 TableName: 'S3Metadata',
                 Item: {
-                    id: metadata.ID,
-                    s3Key: params.Key,
-                    name: metadata.Name,
-                    version: metadata.Version
-
+                    id: packageId,
+                    s3Key: s3Params.Key,
+                    name: packageName,
+                    version: packageVersion
                 }
             };
 
@@ -126,20 +139,47 @@ app.post('/package', async (req, res) => {
                 logger.debug("Metadata written to DynamoDB successfully");
 
                 res.status(201).send({
-                    message: "Package uploaded successfully",
-                    s3Location: data.Location
+                    metadata: {
+                        Name: packageName,
+                        Version: packageVersion,
+                        ID: packageId
+                    },
+                    data: {
+                        Content: req.body.Content || null,
+                        URL: req.body.URL || null,
+                        JSProgram: req.body.JSProgram || null
+                    }
                 });
             } catch (dbError) {
                 logger.error("Error writing to DynamoDB", dbError);
-                res.status(500).send({message: "Error writing metadata to DynamoDB"});
+                res.status(500).send({ message: "Error writing metadata to DynamoDB" });
             }
         });
 
+        // Clean up temporary files
+        fs.rmdirSync(tempDir, { recursive: true });
     } catch (error) {
         logger.error("Internal Server Error", error);
-        res.status(500).send({message: "Internal Server Error"});
+        res.status(500).send({ message: "Internal Server Error" });
     }
 });
+
+async function checkIfPackageExists(packageId) {
+    const params = {
+        TableName: 'S3Metadata',
+        Key: {
+            id: packageId
+        }
+    };
+
+    try {
+        const result = await dynamoDB.get(params).promise();
+        return result.Item;
+    } catch (error) {
+        logger.error("Error checking if package exists", error);
+        throw error;
+    }
+}
 
 // Define the API endpoint for retrieving packages
 app.get('/package/:id', async (req, res) => {
@@ -199,19 +239,23 @@ app.get('/package/:id', async (req, res) => {
 // Define the API endpoint for updating packages
 app.put('/package/:id', async (req, res) => {
     try {
+        logger.info(`Received request to /package/:${req.params.id}`);
         const packageId = req.params.id;
         const {metadata, data} = req.body;
 
         // Validate request body
         if (!metadata || !data || !metadata.Name || !metadata.Version || !metadata.ID) {
+            logger.warn("Invalid request data");
             return res.status(400).send({message: "Invalid request data"});
         }
 
         // Check if package ID matches with metadata ID
         if (packageId !== metadata.ID) {
+            logger.warn("Package ID mismatch");
             return res.status(400).send({message: "Package ID mismatch"});
         }
 
+        logger.debug("Request body validated. Checking if package exists...")
         // Check if the package exists in DynamoDB
         const dynamoDBGetParams = {
             TableName: 'S3Metadata',
@@ -223,6 +267,7 @@ app.put('/package/:id', async (req, res) => {
             return res.status(404).send({message: 'Package does not exist.'});
         }
 
+        logger.debug("Package exists. Updating...");
         // Update package in S3
         const s3Key = `packages/${metadata.Name}-${metadata.Version}.zip`;
         const updateParams = {
@@ -345,7 +390,7 @@ app.post('/packages', async (req, res) => {
         res.header('offset', lastEvaluatedKey ? JSON.stringify(lastEvaluatedKey) : null);
         res.status(200).json(results);
     } catch (error) {
-        console.error('Error in POST /packages:', error);
+        logger.error('Error in POST /packages:', error);
         res.status(500).send({ message: 'Internal Server Error' });
     }
 });
