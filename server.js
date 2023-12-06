@@ -10,7 +10,7 @@ const AWS = require('aws-sdk');
 const logger = require('./dist/logger.js').default;
 const cors = require('cors');
 const app = express();
-const { v4: uuidv4 } = require('uuid');
+const {v4: uuidv4} = require('uuid');
 
 
 // CORS configuration for development and production
@@ -26,8 +26,8 @@ const corsOptions = {
     }
 };
 
-app.use(bodyParser.json({ limit: '100mb' }));
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+app.use(bodyParser.json({limit: '100mb'}));
+app.use(bodyParser.urlencoded({limit: '100mb', extended: true}));
 
 
 // Enable CORS with the specified options
@@ -56,7 +56,7 @@ app.post('/package', async (req, res) => {
         // Check if both Content and URL are provided
         if (req.body.Content && req.body.URL) {
             logger.warn("Both Content and URL provided");
-            return res.status(400).send({ message: "Both Content and URL cannot be set" });
+            return res.status(400).send({message: "Both Content and URL cannot be set"});
         }
 
         if (req.body.Content) {
@@ -77,7 +77,7 @@ app.post('/package', async (req, res) => {
             await git.clone(packageURL, repoPath);
         } else {
             logger.warn("No package content or URL provided");
-            return res.status(400).send({ message: "No package content or URL provided" });
+            return res.status(400).send({message: "No package content or URL provided"});
         }
 
         // Extract package name and version from package.json
@@ -89,7 +89,7 @@ app.post('/package', async (req, res) => {
         const packageExists = await checkIfPackageExists(packageName, packageVersion);
         if (packageExists) {
             logger.warn("Package already exists");
-            return res.status(409).send({ message: "Package already exists" });
+            return res.status(409).send({message: "Package already exists"});
         }
 
         const packageId = uuidv4();
@@ -117,7 +117,7 @@ app.post('/package', async (req, res) => {
         s3.upload(s3Params, async function (err, data) {
             if (err) {
                 logger.error("Error uploading to S3", err);
-                return res.status(500).send({ message: "Error uploading to S3" });
+                return res.status(500).send({message: "Error uploading to S3"});
             }
 
             logger.debug("Package uploaded successfully");
@@ -152,15 +152,15 @@ app.post('/package', async (req, res) => {
                 });
             } catch (dbError) {
                 logger.error("Error writing to DynamoDB", dbError);
-                res.status(500).send({ message: "Error writing metadata to DynamoDB" });
+                res.status(500).send({message: "Error writing metadata to DynamoDB"});
             }
         });
 
         // Clean up temporary files
-        fs.rmdirSync(tempDir, { recursive: true });
+        fs.rmdirSync(tempDir, {recursive: true});
     } catch (error) {
         logger.error("Internal Server Error", error);
-        res.status(500).send({ message: "Internal Server Error" });
+        res.status(500).send({message: "Internal Server Error"});
     }
 });
 
@@ -344,7 +344,7 @@ app.get('/package/:id/rate', async (req, res) => {
     }
 });
 
-// Define the API endpoint for listing NPM packages in the directory
+// Define the API endpoint for listing/searching packages in the directory
 app.post('/packages', async (req, res) => {
     try {
         logger.info("Received request to /packages endpoint");
@@ -354,7 +354,7 @@ app.post('/packages', async (req, res) => {
 
         logger.debug("Validating request body");
         if (!Array.isArray(packageQueries) || packageQueries.length === 0) {
-            return res.status(400).send({ message: "Invalid request body" });
+            return res.status(400).send({message: "Invalid request body"});
         }
 
         const results = [];
@@ -366,7 +366,7 @@ app.post('/packages', async (req, res) => {
                 Limit: limit,
                 ExclusiveStartKey: lastEvaluatedKey,
                 FilterExpression: "Name = :nameVal",
-                ExpressionAttributeValues: { ":nameVal": query.Name }
+                ExpressionAttributeValues: {":nameVal": query.Name}
             };
 
             if (query.Version) {
@@ -391,15 +391,16 @@ app.post('/packages', async (req, res) => {
         res.status(200).json(results);
     } catch (error) {
         logger.error('Error in POST /packages:', error);
-        res.status(500).send({ message: 'Internal Server Error' });
+        res.status(500).send({message: 'Internal Server Error'});
     }
 });
 
-// Define the API endpoint for deleting NPM packages
+
+// Define the API endpoint to reset the directory to default state
 app.delete('/reset', async (req, res) => {
     try {
         logger.info("Received request to /reset endpoint. Emptying S3 bucket...");
-        const listParams = { Bucket: '461zips' };
+        const listParams = {Bucket: '461zips'};
         const listedObjects = await s3.listObjectsV2(listParams).promise();
 
         logger.debug("Number of objects in the bucket: " + listedObjects.Contents.length);
@@ -407,51 +408,148 @@ app.delete('/reset', async (req, res) => {
 
         const deleteParams = {
             Bucket: '461zips',
-            Delete: { Objects: [] }
+            Delete: {Objects: []}
         };
 
-        listedObjects.Contents.forEach(({ Key }) => {
-            deleteParams.Delete.Objects.push({ Key });
+        listedObjects.Contents.forEach(({Key}) => {
+            deleteParams.Delete.Objects.push({Key});
         });
 
         await s3.deleteObjects(deleteParams).promise();
 
         if (listedObjects.IsTruncated) await emptyS3Bucket();
 
-       logger.debug("S3 bucket emptied successfully. Deleting DynamoDB entries...");
-        const scanResult = await dynamoDB.scan({ TableName: 'S3Metadata' }).promise();
+        logger.debug("S3 bucket emptied successfully. Deleting DynamoDB entries...");
+        const scanResult = await dynamoDB.scan({TableName: 'S3Metadata'}).promise();
 
         for (const item of scanResult.Items) {
             await dynamoDB.delete({
                 TableName: 'S3Metadata',
-                Key: { id: item.id }
+                Key: {id: item.id}
             }).promise();
         }
 
         logger.debug("DynamoDB entries deleted successfully. Reset complete.");
-        res.status(200).send({ message: "Registry is reset." });
+        res.status(200).send({message: "Registry is reset."});
     } catch (error) {
         logger.error("Error resetting registry", error);
-        res.status(500).send({ message: "Internal Server Error" });
+        res.status(500).send({message: "Internal Server Error"});
     }
 });
 
+// Define the API endpoint for searching by RegEx
+// this is extremely inefficient. finding a better way might involve adjusting other endpoints
+app.post('/package/byRegEx', async (req, res) => {
+    try {
+        const {RegEx} = req.body;
 
+        // Validate the regex input
+        if (!RegEx) {
+            return res.status(400).send({message: "Regex pattern is required"});
+        }
 
-// Other endpoints TBA
+        let regex;
+        try {
+            regex = new RegExp(RegEx);
+        } catch (error) {
+            return res.status(400).send({message: "Invalid regex pattern"});
+        }
+
+        logger.debug(`Searching packages with regex: ${RegEx}`);
+
+        // List all packages from DynamoDB
+        const scanParams = {
+            TableName: "S3Metadata",
+            ProjectionExpression: "ID"
+        };
+        const allPackages = await dynamoDB.scan(scanParams).promise();
+
+        const matchedPackages = [];
+
+        for (const pkg of allPackages.Items) {
+            const packageData = await fetchPackageData(pkg.ID);
+            const readme = extractReadmeFromZip(packageData.data.Content);
+
+            // Check regex against both README and package name
+            if (regex.test(readme) || regex.test(packageData.metadata.Name)) {
+                matchedPackages.push({
+                    Name: packageData.metadata.Name,
+                    Version: packageData.metadata.Version,
+                    ID: packageData.metadata.ID
+                });
+            }
+        }
+
+        if (matchedPackages.length === 0) {
+            return res.status(404).send({message: "No package found under this regex"});
+        }
+
+        res.status(200).json(matchedPackages);
+    } catch (error) {
+        logger.error('Error in POST /package/byRegEx:', error);
+        res.status(500).send({message: 'Internal Server Error'});
+    }
+});
+
+async function fetchPackageData(packageId) {
+    try {
+        const s3Key = await getS3KeyFromDynamoDB(packageId);
+        if (!s3Key) {
+            throw new Error('Package does not exist.');
+        }
+
+        const s3Params = {
+            Bucket: '461zips',
+            Key: s3Key
+        };
+
+        const data = await s3.getObject(s3Params).promise();
+        const packageContent = data.Body.toString('base64');
+
+        const metadata = {
+            Name: data.Metadata['name'],
+            Version: data.Metadata['version'],
+            ID: data.Metadata['id']
+        };
+
+        return {
+            metadata: metadata,
+            data: {
+                Content: packageContent,
+            }
+        };
+    } catch (error) {
+        logger.error(`Error fetching package data for package ID ${packageId}`, error);
+        throw error;
+    }
+}
+
+function extractReadmeFromZip(encodedZipContent) {
+    const zipContent = Buffer.from(encodedZipContent, 'base64');
+    const zip = new AdmZip(zipContent);
+    const zipEntries = zip.getEntries();
+
+    const readmeEntry = zipEntries.find(entry => /readme\.md/i.test(entry.entryName));
+
+    if (readmeEntry) {
+        return readmeEntry.getData().toString('utf8');
+    } else {
+        return ''; // No README found, return an empty string
+    }
+}
 
 async function emptyS3Bucket() {
-    const listedObjects = await s3.listObjectsV2({ Bucket: '461zips' }).promise();
+    const listedObjects = await s3.listObjectsV2({Bucket: '461zips'}).promise();
 
     if (listedObjects.Contents.length === 0) return;
 
     const deleteParams = {
         Bucket: '461zips',
-        Delete: { Objects: [] }
+        Delete: {Objects: []}
     };
 
-    listedObjects.Contents.forEach(({ Key }) => {
-        deleteParams.Delete.Objects.push({ Key });
+    listedObjects.Contents.forEach(({Key}) => {
+        deleteParams.Delete.Objects.push({Key});
     });
 
     await s3.deleteObjects(deleteParams).promise();
