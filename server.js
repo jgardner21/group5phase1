@@ -10,12 +10,12 @@ const AWS = require('aws-sdk');
 const logger = require('./dist/logger.js').default;
 const cors = require('cors');
 const app = express();
-const {v4: uuidv4} = require('uuid');
+const shortid = require('shortid');
 
 
 // CORS configuration for development and production
 const corsOptions = {
-    origin: function (origin, callback) {
+   /* origin: function (origin, callback) {
         const allowedOrigins =
             ['http://localhost:3000', 'http://ec2-18-222-159-163.us-east-2.compute.amazonaws.com'];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -23,18 +23,15 @@ const corsOptions = {
         } else {
             callback(new Error('Not allowed by CORS')); // Block
         }
-    },
+    },*/
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: '*',
 };
 
+app.use(cors(corsOptions));
 app.use(bodyParser.json({limit: '100mb'}));
 app.use(bodyParser.urlencoded({limit: '100mb', extended: true}));
-
-
-// Enable CORS with the specified options
-app.use(cors(corsOptions));
-
 app.use(express.json());
 
 AWS.config.update({
@@ -114,7 +111,7 @@ app.post('/package', async (req, res) => {
             return res.status(409).send({ message: "Package already exists" });
         }
 
-        const packageId = uuidv4();
+        const packageId = shortid.generate();
         logger.debug(`Generated unique package ID: ${packageId}`);
 
         // Create a zip file from the extracted content
@@ -157,7 +154,7 @@ app.post('/package', async (req, res) => {
                 };
 
                 res.status(201).send(responsePayload);
-                logger.debug("Response sent to client", responsePayload);
+                logger.debug("Response sent to client: " + JSON.stringify(responsePayload));
             } catch (dbError) {
                 logger.error("Error writing to DynamoDB", { Error: dbError.message });
                 res.status(500).send({ message: "Error writing metadata to DynamoDB" });
@@ -375,8 +372,9 @@ app.post('/packages', async (req, res) => {
                 TableName: "S3Metadata",
                 Limit: limit,
                 ExclusiveStartKey: lastEvaluatedKey,
-                FilterExpression: "Name = :nameVal",
-                ExpressionAttributeValues: {":nameVal": query.Name}
+                FilterExpression: "#pkgName = :nameVal", // Use Expression Attribute Names
+                ExpressionAttributeValues: { ":nameVal": query.Name },
+                ExpressionAttributeNames: { "#pkgName": "Name" } // Map #pkgName to Name
             };
 
             if (query.Version) {
