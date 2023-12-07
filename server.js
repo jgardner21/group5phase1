@@ -121,6 +121,9 @@ app.post('/package', async (req, res) => {
             }
 
             logger.debug("Package uploaded successfully");
+            const packageData = await fetchPackageData(packageId); // fetches package data
+            const readme = extractReadmeFromZip(packageData.data.Content); // extract readme from the zip file
+
 
             // Prepare DynamoDB entry
             const dynamoDBParams = {
@@ -129,7 +132,8 @@ app.post('/package', async (req, res) => {
                     id: packageId,
                     s3Key: s3Params.Key,
                     name: packageName,
-                    version: packageVersion
+                    version: packageVersion,
+                    readme: readme
                 }
             };
 
@@ -438,21 +442,21 @@ app.delete('/reset', async (req, res) => {
 });
 
 // Define the API endpoint for searching by RegEx
-// this is extremely inefficient. finding a better way might involve adjusting other endpoints
+// Search through the data base by search over the readme text 
 app.post('/package/byRegEx', async (req, res) => {
     try {
-        const {RegEx} = req.body;
+        const { RegEx } = req.body;
 
         // Validate the regex input
         if (!RegEx) {
-            return res.status(400).send({message: "Regex pattern is required"});
+            return res.status(400).send({ message: "Regex pattern is required" });
         }
 
         let regex;
         try {
             regex = new RegExp(RegEx);
         } catch (error) {
-            return res.status(400).send({message: "Invalid regex pattern"});
+            return res.status(400).send({ message: "Invalid regex pattern" });
         }
 
         logger.debug(`Searching packages with regex: ${RegEx}`);
@@ -460,34 +464,26 @@ app.post('/package/byRegEx', async (req, res) => {
         // List all packages from DynamoDB
         const scanParams = {
             TableName: "S3Metadata",
-            ProjectionExpression: "ID"
+            ProjectionExpression: "id, name, version, readme"
         };
         const allPackages = await dynamoDB.scan(scanParams).promise();
 
-        const matchedPackages = [];
-
-        for (const pkg of allPackages.Items) {
-            const packageData = await fetchPackageData(pkg.ID);
-            const readme = extractReadmeFromZip(packageData.data.Content);
-
-            // Check regex against both README and package name
-            if (regex.test(readme) || regex.test(packageData.metadata.Name)) {
-                matchedPackages.push({
-                    Name: packageData.metadata.Name,
-                    Version: packageData.metadata.Version,
-                    ID: packageData.metadata.ID
-                });
-            }
-        }
+        const matchedPackages = allPackages.Items.filter(pkg => 
+            regex.test(pkg.readme) || regex.test(pkg.name)
+        ).map(pkg => ({
+            Name: pkg.name,
+            Version: pkg.version,
+            ID: pkg.id
+        }));
 
         if (matchedPackages.length === 0) {
-            return res.status(404).send({message: "No package found under this regex"});
+            return res.status(404).send({ message: "No package found under this regex" });
         }
 
         res.status(200).json(matchedPackages);
     } catch (error) {
         logger.error('Error in POST /package/byRegEx:', error);
-        res.status(500).send({message: 'Internal Server Error'});
+        res.status(500).send({ message: 'Internal Server Error' });
     }
 });
 
