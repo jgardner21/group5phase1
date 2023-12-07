@@ -368,26 +368,33 @@ app.post('/packages', async (req, res) => {
         let lastEvaluatedKey = offset;
 
         for (const query of packageQueries) {
-            const scanParams = {
+            if (!query.Name || query.Name.length === 0) {
+                return res.status(400).send({message: "Invalid request body"});
+            }
+
+            let scanParams = {
                 TableName: "S3Metadata",
                 Limit: limit,
-                ExclusiveStartKey: lastEvaluatedKey,
-                FilterExpression: "#pkgName = :nameVal", // Use Expression Attribute Names
-                ExpressionAttributeValues: { ":nameVal": query.Name },
-                ExpressionAttributeNames: { "#pkgName": "Name" } // Map #pkgName to Name
+                ExclusiveStartKey: lastEvaluatedKey
             };
 
-            if (query.Version) {
-                scanParams.FilterExpression += " and Version = :versionVal";
-                scanParams.ExpressionAttributeValues[":versionVal"] = query.Version;
+            if (query.Name !== '*') {
+                scanParams.FilterExpression = "#pkgName = :nameVal";
+                scanParams.ExpressionAttributeValues = { ":nameVal": query.Name };
+                scanParams.ExpressionAttributeNames = { "#pkgName": "name" };
+
+                if (query.Version) {
+                    scanParams.FilterExpression += " and version = :versionVal";
+                    scanParams.ExpressionAttributeValues[":versionVal"] = query.Version;
+                }
             }
 
             logger.debug(`Scanning DynamoDB with parameters: ${JSON.stringify(scanParams)}`);
             const queryResult = await dynamoDB.scan(scanParams).promise();
             results.push(...queryResult.Items.map(item => ({
-                Name: item.Name,
-                Version: item.Version,
-                ID: item.ID
+                Name: item.name,
+                Version: item.version,
+                ID: item.id
             })));
             lastEvaluatedKey = queryResult.LastEvaluatedKey;
             if (results.length >= limit) {
@@ -402,6 +409,7 @@ app.post('/packages', async (req, res) => {
         res.status(500).send({message: 'Internal Server Error'});
     }
 });
+
 
 
 // Define the API endpoint to reset the directory to default state
