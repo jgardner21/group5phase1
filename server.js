@@ -720,3 +720,59 @@ app.delete('/package/byName/:name', async (req, res) => {
         res.status(500).send({message: 'Internal Server Error'});
     }
 });
+
+// Define the API endpoint for retrieving packages by name
+app.get('/package/byName/:name', async (req, res) => {
+    try {
+        const packageName = req.params.name;
+
+        // Query DynamoDB to find packages with the given name
+        const queryResult = await dynamoDB.scan({
+            TableName: 'S3Metadata',
+            FilterExpression: "#name = :nameValue",
+            ExpressionAttributeNames: { "#name": "name" },
+            ExpressionAttributeValues: { ":nameValue": packageName }
+        }).promise();
+
+        if (queryResult.Items.length === 0) {
+            return res.status(404).send({ message: 'No packages found with the given name.' });
+        }
+
+        // Fetch package details from S3 and construct the response
+        const packageResponses = await Promise.all(queryResult.Items.map(async (item) => {
+            const s3Params = {
+                Bucket: '461zips',
+                Key: item.s3Key
+            };
+
+            const data = await s3.getObject(s3Params).promise();
+            const packageContent = data.Body.toString('base64');
+
+            // Extract metadata from S3 object
+            const metadata = {
+                Name: data.Metadata['name'],
+                Version: data.Metadata['version'],
+                ID: data.Metadata['id']
+            };
+
+            // Extract GitHub URL from package.json inside the zip
+            const gitHubURL = await fetchPackageGitHubURL(data.Body);
+
+            return {
+                metadata: metadata,
+                data: {
+                    Content: packageContent,
+                    URL: gitHubURL,
+                    JSProgram: "if (process.argv.length === 7) { console.log('Success'); process.exit(0); } else " +
+                    "{ console.log('Failed'); process.exit(1); }"
+                }
+            };
+        }));
+
+        res.status(200).json(packageResponses);
+    } catch (error) {
+        logger.error(`Error in GET /package/byName/${packageName}`, error);
+        res.status(500).send({ message: 'Internal Server Error' });
+    }
+});
+
