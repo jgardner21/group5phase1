@@ -310,6 +310,24 @@ app.put('/package/:id', async (req, res) => {
 
         await s3.upload(updateParams).promise();
         logger.debug("Package updated in S3");
+        
+        // upload the readme content
+        if (data.Readme) {
+            const readmeS3Key = `readmes/${metadata.Name}-${metadata.Version}.md`;
+            const readmeUpdateParams = {
+                Bucket: '461zips',
+                Key: readmeS3Key,
+                Body: Buffer.from(data.Readme, 'utf8'), // Assuming README data is sent as a plain text
+                Metadata: {
+                    'name': metadata.Name,
+                    'version': metadata.Version,
+                    'id': metadata.ID
+                }
+            };
+            await s3.upload(readmeUpdateParams).promise();
+            logger.debug("README updated in S3");
+        }
+
 
         // Update DynamoDB entry
         const dynamoDBUpdateParams = {
