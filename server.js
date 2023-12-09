@@ -645,3 +645,78 @@ const port = 80;
 app.listen(port, '0.0.0.0', () => {
     logger.debug(`Server listening on port ${port}`);
 });
+
+// Define the API endpoint for deleting a package
+app.delete('/package/:id', async (req, res) => {
+    try {
+        const packageId = req.params.id;
+
+        // Check if the package exists in DynamoDB
+        const packageExists = await checkIfPackageExists(packageId);
+        if (!packageExists) {
+            return res.status(404).send({message: 'Package does not exist.'});
+        }
+
+        // Delete the package from S3
+        const s3DeleteParams = {
+            Bucket: '461zips',
+            Key: packageExists.s3Key
+        };
+        await s3.deleteObject(s3DeleteParams).promise();
+        logger.debug(`Deleted package from S3: ${packageId}`);
+
+        // Delete the DynamoDB entry
+        const dynamoDBDeleteParams = {
+            TableName: 'S3Metadata',
+            Key: { id: packageId }
+        };
+        await dynamoDB.delete(dynamoDBDeleteParams).promise();
+        logger.debug(`Deleted DynamoDB entry for package: ${packageId}`);
+
+        res.status(200).send({message: 'Package deleted successfully'});
+    } catch (error) {
+        logger.error(`Error in DELETE /package/${req.params.id}`, error);
+        res.status(500).send({message: 'Internal Server Error'});
+    }
+});
+
+// Define the API endpoint for deleting a package by name
+app.delete('/package/byName/:name', async (req, res) => {
+    try {
+        const packageName = req.params.name;
+
+        // Query DynamoDB to find packages with the given name
+        const queryResult = await dynamoDB.scan({
+            TableName: 'S3Metadata',
+            FilterExpression: "#name = :nameValue",
+            ExpressionAttributeNames: {"#name": "name"},
+            ExpressionAttributeValues: {":nameValue": packageName}
+        }).promise();
+
+        if (queryResult.Items.length === 0) {
+            return res.status(404).send({message: 'No package found with the given name.'});
+        }
+
+        // Delete each found package from S3 and DynamoDB
+        for (const item of queryResult.Items) {
+            const s3DeleteParams = {
+                Bucket: '461zips',
+                Key: item.s3Key
+            };
+            await s3.deleteObject(s3DeleteParams).promise();
+            logger.debug(`Deleted package from S3: ${item.id}`);
+
+            const dynamoDBDeleteParams = {
+                TableName: 'S3Metadata',
+                Key: {id: item.id}
+            };
+            await dynamoDB.delete(dynamoDBDeleteParams).promise();
+            logger.debug(`Deleted DynamoDB entry for package: ${item.id}`);
+        }
+
+        res.status(200).send({message: 'Packages deleted successfully'});
+    } catch (error) {
+        logger.error(`Error in DELETE /package/byname/${req.params.name}`, error);
+        res.status(500).send({message: 'Internal Server Error'});
+    }
+});
