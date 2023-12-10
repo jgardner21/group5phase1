@@ -406,6 +406,11 @@ app.post('/packages', async (req, res) => {
             return res.status(400).send({message: "Invalid request body"});
         }
 
+        // Validate offset (ensure it's a number or a valid format)
+        if (offset !== null && (typeof offset !== 'number' || offset < 0)) {
+            return res.status(400).send({ message: "Invalid offset parameter" });
+        }
+
         const results = [];
         let lastEvaluatedKey = offset;
 
