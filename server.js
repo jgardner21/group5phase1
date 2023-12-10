@@ -15,15 +15,15 @@ const shortid = require('shortid');
 
 // CORS configuration for development and production
 const corsOptions = {
-   /* origin: function (origin, callback) {
-        const allowedOrigins =
-            ['http://localhost:3000', 'http://ec2-18-222-159-163.us-east-2.compute.amazonaws.com'];
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true); // Allow
-        } else {
-            callback(new Error('Not allowed by CORS')); // Block
-        }
-    },*/
+    /* origin: function (origin, callback) {
+         const allowedOrigins =
+             ['http://localhost:3000', 'http://ec2-18-222-159-163.us-east-2.compute.amazonaws.com'];
+         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+             callback(null, true); // Allow
+         } else {
+             callback(new Error('Not allowed by CORS')); // Block
+         }
+     },*/
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: '*',
@@ -56,8 +56,11 @@ app.post('/package', async (req, res) => {
 
         // Check if both Content and URL are provided
         if (req.body.Content && req.body.URL) {
-            logger.warn("Invalid request: Both Content and URL provided", { Content: req.body.Content, URL: req.body.URL });
-            return res.status(400).send({ message: "Both Content and URL cannot be set" });
+            logger.warn("Invalid request: Both Content and URL provided", {
+                Content: req.body.Content,
+                URL: req.body.URL
+            });
+            return res.status(400).send({message: "Both Content and URL cannot be set"});
         }
 
         if (req.body.Content) {
@@ -83,21 +86,24 @@ app.post('/package', async (req, res) => {
 
             const git = simpleGit();
             await git.clone(req.body.URL, repoPath).catch(err => {
-                logger.error("Error cloning repository", { URL: req.body.URL, Error: err.message });
+                logger.error("Error cloning repository", {URL: req.body.URL, Error: err.message});
                 throw err;
             });
             logger.debug(`Cloned repository to temporary path: ${repoPath}`);
         } else {
             logger.warn("Invalid request: No package content or URL provided");
-            return res.status(400).send({ message: "No package content or URL provided" });
+            return res.status(400).send({message: "No package content or URL provided"});
         }
 
         // Extract package name and version from package.json
         try {
             packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
         } catch (readError) {
-            logger.error("Error reading package.json", { Path: path.join(repoPath, 'package.json'), Error: readError.message });
-            return res.status(500).send({ message: "Error reading package.json" });
+            logger.error("Error reading package.json", {
+                Path: path.join(repoPath, 'package.json'),
+                Error: readError.message
+            });
+            return res.status(500).send({message: "Error reading package.json"});
         }
 
         packageName = packageJson.name;
@@ -108,7 +114,7 @@ app.post('/package', async (req, res) => {
         const packageExists = await checkIfPackageExists(packageName, packageVersion);
         if (packageExists) {
             logger.warn(`Package already exists: ${packageName}, Version: ${packageVersion}`);
-            return res.status(409).send({ message: "Package already exists" });
+            return res.status(409).send({message: "Package already exists"});
         }
 
         const packageId = shortid.generate();
@@ -126,14 +132,14 @@ app.post('/package', async (req, res) => {
             Bucket: '461zips',
             Key: `packages/${packageName}-${packageVersion}.zip`,
             Body: fileContent,
-            Metadata: { 'name': packageName, 'version': packageVersion, 'id': packageId }
+            Metadata: {'name': packageName, 'version': packageVersion, 'id': packageId}
         };
 
-        logger.debug("Starting S3 upload", { Bucket: s3Params.Bucket, Key: s3Params.Key });
+        logger.debug("Starting S3 upload", {Bucket: s3Params.Bucket, Key: s3Params.Key});
         s3.upload(s3Params, async function (err, data) {
             if (err) {
-                logger.error("Error uploading to S3", { Error: err.message });
-                return res.status(500).send({ message: "Error uploading to S3" });
+                logger.error("Error uploading to S3", {Error: err.message});
+                return res.status(500).send({message: "Error uploading to S3"});
             }
 
             logger.debug("S3 upload successful");
@@ -141,32 +147,40 @@ app.post('/package', async (req, res) => {
             // Prepare DynamoDB entry
             const dynamoDBParams = {
                 TableName: 'S3Metadata',
-                Item: { id: packageId, s3Key: s3Params.Key, name: packageName, version: packageVersion }
+                Item: {id: packageId, s3Key: s3Params.Key, name: packageName, version: packageVersion}
             };
 
             try {
                 await dynamoDB.put(dynamoDBParams).promise();
                 logger.debug("DynamoDB metadata write successful");
 
+                // Construct the response payload
                 const responsePayload = {
-                    metadata: { Name: packageName, Version: packageVersion, ID: packageId },
-                    data: { Content: req.body.Content || null, URL: req.body.URL || null }
+                    metadata: {Name: packageName, Version: packageVersion, ID: packageId},
+                    data: {}
                 };
+
+                // Conditionally add Content or URL to the response
+                if (req.body.Content) {
+                    responsePayload.data.Content = req.body.Content;
+                } else if (req.body.URL) {
+                    responsePayload.data.URL = req.body.URL;
+                }
 
                 res.status(201).send(responsePayload);
                 logger.debug("Response sent to client: " + JSON.stringify(responsePayload));
             } catch (dbError) {
-                logger.error("Error writing to DynamoDB", { Error: dbError.message });
-                res.status(500).send({ message: "Error writing metadata to DynamoDB" });
+                logger.error("Error writing to DynamoDB", {Error: dbError.message});
+                res.status(500).send({message: "Error writing metadata to DynamoDB"});
             }
         });
 
         // Clean up temporary files
-        fs.rmdirSync(tempDir, { recursive: true });
-        logger.debug("Cleaned up temporary files", { TempDir: tempDir });
+        fs.rmdirSync(tempDir, {recursive: true});
+        logger.debug("Cleaned up temporary files", {TempDir: tempDir});
     } catch (error) {
-        logger.error("Internal Server Error", { Error: error.message });
-        res.status(500).send({ message: "Internal Server Error" });
+        logger.error("Internal Server Error", {Error: error.message});
+        res.status(500).send({message: "Internal Server Error"});
     }
 });
 
@@ -380,8 +394,8 @@ app.post('/packages', async (req, res) => {
 
             if (query.Name !== '*') {
                 scanParams.FilterExpression = "#pkgName = :nameVal";
-                scanParams.ExpressionAttributeValues = { ":nameVal": query.Name };
-                scanParams.ExpressionAttributeNames = { "#pkgName": "name" };
+                scanParams.ExpressionAttributeValues = {":nameVal": query.Name};
+                scanParams.ExpressionAttributeNames = {"#pkgName": "name"};
 
                 if (query.Version) {
                     scanParams.FilterExpression += " and version = :versionVal";
@@ -409,7 +423,6 @@ app.post('/packages', async (req, res) => {
         res.status(500).send({message: 'Internal Server Error'});
     }
 });
-
 
 
 // Define the API endpoint to reset the directory to default state
@@ -453,6 +466,7 @@ app.delete('/reset', async (req, res) => {
     }
 });
 
+
 // Define the API endpoint for searching by RegEx
 // this is extremely inefficient. finding a better way might involve adjusting other endpoints
 app.post('/package/byRegEx', async (req, res) => {
@@ -476,22 +490,23 @@ app.post('/package/byRegEx', async (req, res) => {
         // List all packages from DynamoDB
         const scanParams = {
             TableName: "S3Metadata",
-            ProjectionExpression: "ID"
+            ProjectionExpression: "id"
         };
         const allPackages = await dynamoDB.scan(scanParams).promise();
 
         const matchedPackages = [];
 
         for (const pkg of allPackages.Items) {
-            const packageData = await fetchPackageData(pkg.ID);
+            const packageData = await fetchPackageData(pkg.id);
             const readme = extractReadmeFromZip(packageData.data.Content);
 
             // Check regex against both README and package name
-            if (regex.test(readme) || regex.test(packageData.metadata.Name)) {
+            if (regex.test(readme) || regex.test(packageData.metadata.name)) {
                 matchedPackages.push({
-                    Name: packageData.metadata.Name,
-                    Version: packageData.metadata.Version,
-                    ID: packageData.metadata.ID
+                    Name: packageData.metadata.name,
+                    Version: packageData.metadata.version,
+                    ID: packageData.metadata.id
+
                 });
             }
         }
