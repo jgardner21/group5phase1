@@ -302,6 +302,12 @@ app.put('/package/:id', async (req, res) => {
             return res.status(404).send({message: 'Package does not exist.'});
         }
 
+        // Adding a check for name and version
+        if (result.Item.name !== metadata.Name || result.Item.version !== metadata.Version) {
+            logger.warn("Package name or version mismatch");
+            return res.status(400).send({message: "Package name or version mismatch"});
+        }
+
         logger.debug("Package exists. Updating...");
         // Update package in S3
         const s3Key = `packages/${metadata.Name}-${metadata.Version}.zip`;
