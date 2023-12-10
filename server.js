@@ -536,10 +536,8 @@ app.post('/package/byRegEx', async (req, res) => {
             // Check regex against both README and package name
             if (regex.test(readme) || regex.test(packageData.metadata.name)) {
                 matchedPackages.push({
-                    Name: packageData.metadata.name,
                     Version: packageData.metadata.version,
-                    ID: packageData.metadata.id
-
+                    Name: packageData.metadata.name
                 });
             }
         }
