@@ -74,6 +74,20 @@ app.post('/package', async (req, res) => {
             logger.debug(`Written base64 content to temporary zip file at: ${zipFilePath}`);
 
             zip = new AdmZip(zipFilePath);
+            // Adding extraction for meta data from pacakge zip
+            const packageJsonEntry = zip.getEntries().find(entry => entry.entryName === 'package.json');
+
+            if (!packageJsonEntry) {
+                return res.status(500).send({ message: "Error reading package.json"});
+            }
+
+            packageJson = JSON.parse(packageJsonEntry.getData().toString('utf8'));
+            packageName = packageJson.name;
+            packageVersion = packageJson.version;
+            logger.debug(`Extracted package info: Name - ${packageName}, Version - ${packageVersion}`);
+
+            // end of fix for package json
+            
             repoPath = path.join(tempDir, 'repo');
             zip.extractAllTo(repoPath, true);
             logger.debug(`Extracted zip content to temporary repository path: ${repoPath}`);
@@ -95,20 +109,20 @@ app.post('/package', async (req, res) => {
             return res.status(400).send({message: "No package content or URL provided"});
         }
 
-        // Extract package name and version from package.json
-        try {
-            packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
-        } catch (readError) {
-            logger.error("Error reading package.json", {
-                Path: path.join(repoPath, 'package.json'),
-                Error: readError.message
-            });
-            return res.status(500).send({message: "Error reading package.json"});
-        }
+        // // Extract package name and version from package.json
+        // try {
+        //     packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
+        // } catch (readError) {
+        //     logger.error("Error reading package.json", {
+        //         Path: path.join(repoPath, 'package.json'),
+        //         Error: readError.message
+        //     });
+        //     return res.status(500).send({message: "Error reading package.json"});
+        // }
 
-        packageName = packageJson.name;
-        packageVersion = packageJson.version;
-        logger.debug(`Extracted package info: Name - ${packageName}, Version - ${packageVersion}`);
+        // packageName = packageJson.name;
+        // packageVersion = packageJson.version;
+        // logger.debug(`Extracted package info: Name - ${packageName}, Version - ${packageVersion}`);
 
         // Check if the package already exists
         const packageExists = await checkIfPackageExists(packageName, packageVersion);
@@ -644,135 +658,5 @@ async function getS3KeyFromDynamoDB(id) {
 const port = 80;
 app.listen(port, '0.0.0.0', () => {
     logger.debug(`Server listening on port ${port}`);
-});
-
-// Define the API endpoint for deleting a package
-app.delete('/package/:id', async (req, res) => {
-    try {
-        const packageId = req.params.id;
-
-        // Check if the package exists in DynamoDB
-        const packageExists = await checkIfPackageExists(packageId);
-        if (!packageExists) {
-            return res.status(404).send({message: 'Package does not exist.'});
-        }
-
-        // Delete the package from S3
-        const s3DeleteParams = {
-            Bucket: '461zips',
-            Key: packageExists.s3Key
-        };
-        await s3.deleteObject(s3DeleteParams).promise();
-        logger.debug(`Deleted package from S3: ${packageId}`);
-
-        // Delete the DynamoDB entry
-        const dynamoDBDeleteParams = {
-            TableName: 'S3Metadata',
-            Key: { id: packageId }
-        };
-        await dynamoDB.delete(dynamoDBDeleteParams).promise();
-        logger.debug(`Deleted DynamoDB entry for package: ${packageId}`);
-
-        res.status(200).send({message: 'Package deleted successfully'});
-    } catch (error) {
-        logger.error(`Error in DELETE /package/${req.params.id}`, error);
-        res.status(500).send({message: 'Internal Server Error'});
-    }
-});
-
-// Define the API endpoint for deleting a package by name
-app.delete('/package/byName/:name', async (req, res) => {
-    try {
-        const packageName = req.params.name;
-
-        // Query DynamoDB to find packages with the given name
-        const queryResult = await dynamoDB.scan({
-            TableName: 'S3Metadata',
-            FilterExpression: "#name = :nameValue",
-            ExpressionAttributeNames: {"#name": "name"},
-            ExpressionAttributeValues: {":nameValue": packageName}
-        }).promise();
-
-        if (queryResult.Items.length === 0) {
-            return res.status(404).send({message: 'No package found with the given name.'});
-        }
-
-        // Delete each found package from S3 and DynamoDB
-        for (const item of queryResult.Items) {
-            const s3DeleteParams = {
-                Bucket: '461zips',
-                Key: item.s3Key
-            };
-            await s3.deleteObject(s3DeleteParams).promise();
-            logger.debug(`Deleted package from S3: ${item.id}`);
-
-            const dynamoDBDeleteParams = {
-                TableName: 'S3Metadata',
-                Key: {id: item.id}
-            };
-            await dynamoDB.delete(dynamoDBDeleteParams).promise();
-            logger.debug(`Deleted DynamoDB entry for package: ${item.id}`);
-        }
-
-        res.status(200).send({message: 'Packages deleted successfully'});
-    } catch (error) {
-        logger.error(`Error in DELETE /package/byname/${req.params.name}`, error);
-        res.status(500).send({message: 'Internal Server Error'});
-    }
-});
-
-// Define the API endpoint for retrieving packages by name
-app.get('/package/byName/:name', async (req, res) => {
-    try {
-        const packageName = req.params.name;
-
-        // Query DynamoDB to find packages with the given name
-        const queryResult = await dynamoDB.scan({
-            TableName: 'S3Metadata',
-            FilterExpression: "#name = :nameValue",
-            ExpressionAttributeNames: { "#name": "name" },
-            ExpressionAttributeValues: { ":nameValue": packageName }
-        }).promise();
-
-        if (queryResult.Items.length === 0) {
-            return res.status(404).send({ message: 'No packages found with the given name.' });
-        }
-
-        // Fetch package details from S3 and construct the response
-        const packageResponses = await Promise.all(queryResult.Items.map(async (item) => {
-            const s3Params = {
-                Bucket: '461zips',
-                Key: item.s3Key
-            };
-
-            const data = await s3.getObject(s3Params).promise();
-            const packageContent = data.Body.toString('base64');
-
-            // Extract metadata from S3 object
-            const metadata = {
-                Name: data.Metadata['name'],
-                Version: data.Metadata['version'],
-                ID: data.Metadata['id']
-            };
-
-            // Extract GitHub URL from package.json inside the zip
-            const gitHubURL = await fetchPackageGitHubURL(data.Body);
-
-            return {
-                metadata: metadata,
-                data: {
-                    Content: packageContent,
-                    URL: gitHubURL,
-                    JSProgram: "if (process.argv.length === 7) { console.log('Success'); process.exit(0); } else " +
-                    "{ console.log('Failed'); process.exit(1); }"
-                }
-            };
-        }));
-
-        res.status(200).json(packageResponses);
-    } catch (error) {
-        logger.error(`Error in GET /package/byName/${packageName}`, error);
-        res.status(500).send({ message: 'Internal Server Error' });
-    }
 });
 
