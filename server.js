@@ -375,7 +375,15 @@ app.get('/package/:id/rate', async (req, res) => {
 
         // Get metric scores
         const scores = await get_metric_scores(tempFilePath);
-        res.json(scores);
+
+        //adding a error for score handling
+        if (!scores) {
+            return res.status(500).send({ message: 'Error computing package metrics.' });
+        }
+        //end of error 
+
+        //fix response
+        res.status(200).json(scores);
 
         // Cleanup temporary file
         fs.unlinkSync(tempFilePath);
