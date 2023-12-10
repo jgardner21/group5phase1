@@ -440,7 +440,7 @@ app.post('/packages', async (req, res) => {
             })));
             lastEvaluatedKey = queryResult.LastEvaluatedKey;
             if (results.length >= limit) {
-                break; // Stop if the limit is reached
+                return res.status(413).send({ message: "Too many packages returned" });
             }
         }
 
