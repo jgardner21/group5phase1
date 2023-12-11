@@ -1,3 +1,4 @@
+require('dotenv').config();
 const simpleGit = require('simple-git');
 const os = require('os');
 const AdmZip = require('adm-zip');
@@ -75,7 +76,7 @@ app.post('/package', async (req, res) => {
 
             zip = new AdmZip(zipFilePath);
             // Adding extraction for meta data from pacakge zip
-            const packageJsonEntry = zip.getEntries().find(entry => entry.entryName === 'package.json');
+            const packageJsonEntry = zip.getEntries().find(entry => entry.entryName.endsWith('package.json'));
 
             if (!packageJsonEntry) {
                 return res.status(500).send({ message: "Error reading package.json"});
