@@ -77,7 +77,7 @@ app.post('/package', async (req, res) => {
             zip = new AdmZip(zipFilePath);
             // Adding extraction for meta data from pacakge zip
             const packageJsonEntry = zip.getEntries().find(entry => entry.entryName.endsWith('package.json'));
-
+            
             if (!packageJsonEntry) {
                 return res.status(500).send({ message: "Error reading package.json"});
             }
@@ -110,30 +110,68 @@ app.post('/package', async (req, res) => {
             return res.status(400).send({message: "No package content or URL provided"});
         }
 
-        // // Extract package name and version from package.json
-        // try {
-        //     packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
-        // } catch (readError) {
-        //     logger.error("Error reading package.json", {
-        //         Path: path.join(repoPath, 'package.json'),
-        //         Error: readError.message
-        //     });
-        //     return res.status(500).send({message: "Error reading package.json"});
-        // }
-
-        // packageName = packageJson.name;
-        // packageVersion = packageJson.version;
-        // logger.debug(`Extracted package info: Name - ${packageName}, Version - ${packageVersion}`);
-
         // Check if the package already exists
         const packageExists = await checkIfPackageExists(packageName, packageVersion);
         if (packageExists) {
-            logger.warn(`Package already exists: ${packageName}, Version: ${packageVersion}`);
-            return res.status(409).send({message: "Package already exists"});
+            // Package exists, send a conflict response
+            return res.status(409).send({ message: "Package already exists" });
         }
+
+        const tempScoreFilePath = path.join(tempDir, 'score_input.txt');
+        fs.writeFileSync(tempScoreFilePath, "Your input data for scoring");
+
+        // Call get_metric_scores function
+        try {
+            const scores = await get_metric_scores(tempScoreFilePath);
+            if (scores < 0.5) {
+                // Score is too low, reject the upload
+                return res.status(400).send({ message: "Package score is too low for upload" });
+            }
+        } catch (scoreError) {
+            logger.error("Error calculating package score", { Error: scoreError.message });
+            return res.status(500).send({ message: "Error calculating package score" });
+        }
+
+
 
         const packageId = shortid.generate();
         logger.debug(`Generated unique package ID: ${packageId}`);
+
+        const readmeEntry = zip.getEntries().find(entry => entry.entryName.endsWith('README.md'));
+
+        if (!readmeEntry) {
+            logger.error("README.md not found in zip");
+            return res.status(500).send({ message: "README.md not found in zip" });
+        }
+
+        // Try to read the README.md content
+        let readmeContent;
+        try {
+            readmeContent = readmeEntry.getData().toString('utf8');
+        } catch (readError) {
+            logger.error("Error reading README.md", { Error: readError.message });
+            return res.status(500).send({ message: "Error reading README.md" });
+        }
+
+
+        try {
+            const readmeS3Params = {
+                Bucket: '461zips',
+                Key: `readmes/${packageName}-${packageVersion}.md`,
+                Body: readmeContent,
+                Metadata: { 'name': packageName, 'version': packageVersion, 'id': packageId }
+            };
+
+            logger.debug("Starting S3 upload for README", { Bucket: readmeS3Params.Bucket, Key: readmeS3Params.Key });
+            await s3.upload(readmeS3Params).promise();
+            logger.debug("README S3 upload successful");
+
+        } catch (readError) {
+            logger.error("Error reading or uploading README.md", { Path: readmeFilePath, Error: readError.message });
+            return res.status(500).send({ message: "Error reading package.json" }); // not sure about the error here
+        }
+        //end of upload as a object
+
 
         // Create a zip file from the extracted content
         zip = new AdmZip();
@@ -200,20 +238,23 @@ app.post('/package', async (req, res) => {
 });
 
 
-async function checkIfPackageExists(packageId) {
-    const params = {
+async function checkIfPackageExists(packageName, packageVersion) {
+    const scanParams = {
         TableName: 'S3Metadata',
-        Key: {
-            id: packageId
-        }
+        FilterExpression: "#pkgName = :nameVal and version = :versionVal",
+        ExpressionAttributeNames: {"#pkgName": "name"},
+        ExpressionAttributeValues:  {":nameVal": packageName, ":versionVal": packageVersion}
+
     };
 
     try {
-        const result = await dynamoDB.get(params).promise();
-        return result.Item;
+        logger.debug("Executing DynamoDB Scan with params:", scanParams);
+        const result = await dynamoDB.scan(scanParams).promise();
+        logger.debug("DynamoDB Scan result:", result);
+        return result.Items.length > 0;
     } catch (error) {
-        logger.error("Error checking if package exists", error);
-        throw error;
+        logger.error("Error querying DynamoDB", {Error: error.message, Params: scanParams});
+        throw new Error("Failed to query DynamoDB");
     }
 }
 
@@ -669,7 +710,7 @@ async function getS3KeyFromDynamoDB(id) {
     return result.Item ? result.Item.s3Key : null;
 }
 
-const port = 80;
+const port = 8080;
 app.listen(port, '0.0.0.0', () => {
     logger.debug(`Server listening on port ${port}`);
 });
