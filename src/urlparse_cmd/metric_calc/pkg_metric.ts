@@ -3,6 +3,8 @@ import { RampUpCalculator } from "./ramp_up";
 import { CorrectnessCalculator } from "./correctness";
 import { LicenseCalculator } from "./license";
 import { Responsive_MaintainerCalculator as ResponsiveMaintainerCalculator } from "./responisve_maintainer";
+import { CodeReviewFractionCalculator } from "./code_review_frac";
+import { DependencyPinningCalculator } from "./pinned_dependencies_frac";
 import { GithubAPIService } from './git_API_call';
 import { getPackageJSONFromClone } from "./local_clone";
 import logger from "../../logger";
@@ -12,7 +14,9 @@ export class MetricScores {
     ramp_up: RampUpCalculator;
     correctness: CorrectnessCalculator;
     license: LicenseCalculator;
-    responiveness: ResponsiveMaintainerCalculator;
+    responsiveness: ResponsiveMaintainerCalculator;
+    pinned_frac: DependencyPinningCalculator;
+    reviewed_pull_frac: CodeReviewFractionCalculator;
     local_clone: string; //Filepath of local clone of repo
     packageJSON: any; //JSON object directly extracted from the package.json
     //We need it in multiple spots, so it makes sense to get it here
@@ -20,17 +24,20 @@ export class MetricScores {
     constructor(githubAPI: GithubAPIService, repo_obj: any, local_clone: string) {
         //Use any as type for objects because it becomes a massive pain if we don't
 
-        //Create instances of our 5 classes for calcing scores
+        //Create instances of our 7 classes for calcing scores
         this.bus_factor = new BusFactorCalculator(githubAPI);
         this.ramp_up = new RampUpCalculator(local_clone);
         this.correctness = new CorrectnessCalculator(githubAPI, repo_obj);
         this.license = new LicenseCalculator(repo_obj);
-        this.responiveness = new ResponsiveMaintainerCalculator(githubAPI);
-
+        this.responsiveness = new ResponsiveMaintainerCalculator(githubAPI);
+        this.pinned_frac = new DependencyPinningCalculator(githubAPI);
+        this.reviewed_pull_frac = new CodeReviewFractionCalculator(githubAPI);
+        
         this.local_clone = local_clone
         this.packageJSON = getPackageJSONFromClone(this.local_clone) //This is needed from the clone in a multiple spots so we do this here to avoid extracting it twice
     }
 
+    
     async getBusFactor() {
 
         //Call each subfunction for calculating parts of bus factor
@@ -130,7 +137,7 @@ export class MetricScores {
     }
 
     async getResponsiveness(): Promise<number> {
-        const pull_response_time = await this.responiveness.calcPullResponseTime();
+        const pull_response_time = await this.responsiveness.calcPullResponseTime();
         if(pull_response_time == -1) {
             logger.error("Failed to get pull response time")
             return 0
@@ -138,7 +145,7 @@ export class MetricScores {
         else {
             logger.debug(`Pull response time: ${pull_response_time}`)
         }
-        const issue_response_time = await this.responiveness.calcIssueResponseTime();
+        const issue_response_time = await this.responsiveness.calcIssueResponseTime();
         if(issue_response_time == -1) {
             logger.error("Failed to get pull response time")
             return 0
@@ -148,6 +155,25 @@ export class MetricScores {
         }
     // console.log(issue_response_time);
 
-        return this.responiveness.totalResponsivenessScore(pull_response_time, issue_response_time);
+        return this.responsiveness.totalResponsivenessScore(pull_response_time, issue_response_time);
+    }
+
+    
+    async getPinnedDependenciesFraction(): Promise<number> {
+        try {
+            return await this.pinned_frac.calcPinnedDependenciesFraction();
+        } catch (error) {
+            logger.error(`Error calculating pinned dependencies fraction: ${error}`);
+            return 0;
+        }
+    }
+
+    async getCodeReviewFraction(): Promise<number> {
+        try {
+            return await this.reviewed_pull_frac.calcCodeReviewFraction();
+        } catch (error) {
+            logger.error(`Error calculating code review fraction: ${error}`);
+            return 0;
+        }
     }
 }

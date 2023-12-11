@@ -4,6 +4,7 @@ import logger from '../logger';
 import { GithubAPIService } from './metric_calc/git_API_call'
 import { cleanupTempDir, cloneRepoLocally } from './metric_calc/local_clone';
 import { MetricScores } from './metric_calc/pkg_metric';
+import { url } from 'inspector';
 
 class MetricScoreResults {
     //General purpose class  
@@ -16,6 +17,8 @@ class MetricScoreResults {
     bus_factor: number = 0;
     maintainer: number = 0;
     license: number = 0;
+    pinned_frac: number = 0;
+    reviewed_pull_frac: number = 0;
     clone_path: string = '';
 
     constructor (url: string) {
@@ -54,7 +57,12 @@ class MetricScoreResults {
     }
 
     calc_net_score() {
-        this.net_score = (this.license) * (this.bus_factor * 0.40 + 0.25 * (this.correctness + this.maintainer) + 0.1 * this.ramp_up)
+        this.net_score = (this.license) * (0.25*this.bus_factor + 0.17*(this.correctness + this.maintainer) + 0.11*this.ramp_up + 0.15*(this.pinned_frac + this.reviewed_pull_frac))
+    }
+
+    print_scores() {
+        //TAs advised to technically not do it like this but whatever its fine
+        //console.log(`{"URL":"${this.url}", "NET_SCORE":${parseFloat(this.net_score.toFixed(5))}, "RAMP_UP_SCORE":${parseFloat(this.ramp_up.toFixed(5))}, "CORRECTNESS_SCORE":${parseFloat(this.correctness.toFixed(5))}, "BUS_FACTOR_SCORE":${parseFloat(this.bus_factor.toFixed(5))}, "RESPONSIVE_MAINTAINER_SCORE":${parseFloat(this.maintainer.toFixed(5))}, "LICENSE_SCORE":${parseFloat(this.license.toFixed(5))}}`) //Not sure if doing it like this is ok?
     }
 }
 
@@ -66,8 +74,7 @@ export default async function get_metric_scores(filename: string) : Promise<any>
     //     throw new Error("Invalid command given, command must be one of ./run (install | test | URL_FILE)")
     // }
     let allScores = [];
-
-
+    
     //Step 1: Open file
     try {
         var url_file = fs.readFileSync(filename);
@@ -126,6 +133,8 @@ export default async function get_metric_scores(filename: string) : Promise<any>
                         url_metrics.license = scores.getLicense()
                         url_metrics.maintainer = await scores.getResponsiveness();
                         url_metrics.correctness = scores.getCorrectness();
+                        url_metrics.pinned_frac = await scores.getPinnedDependenciesFraction();
+                        url_metrics.reviewed_pull_frac = await scores.getCodeReviewFraction();
                         
                         //Once all 5 scores are calculated, update net score using our formula
                         //If any errors occur within the subscores, we just set them to 0
@@ -156,7 +165,6 @@ export default async function get_metric_scores(filename: string) : Promise<any>
 
             if(await url_metrics.init_api_caller(owner_name, repo_name)) { //Essentially the same as above minus a few steps
                 try {
-                    // @ts-ignore
                     url_metrics.clone_path = await cloneRepoLocally(url_metrics.repo_obj.clone_url, url_metrics.repo_obj.name)
                     logger.info(`Successfully cloned repo for ${url_list[i]} locally`)
                     logger.debug(`Repo clone located at ${url_metrics.clone_path}`)
@@ -168,6 +176,8 @@ export default async function get_metric_scores(filename: string) : Promise<any>
                     url_metrics.license = scores.getLicense();
                     url_metrics.maintainer = await scores.getResponsiveness();
                     url_metrics.correctness = scores.getCorrectness();
+                    url_metrics.pinned_frac = await scores.getPinnedDependenciesFraction();
+                    url_metrics.reviewed_pull_frac = await scores.getCodeReviewFraction();
                     url_metrics.calc_net_score()
                     logger.debug(`Finished calculating score for ${url_list[i]}`)
 
@@ -192,14 +202,15 @@ export default async function get_metric_scores(filename: string) : Promise<any>
             "CORRECTNESS_SCORE": parseFloat(url_metrics.correctness.toFixed(5)),
             "BUS_FACTOR_SCORE": parseFloat(url_metrics.bus_factor.toFixed(5)),
             "RESPONSIVE_MAINTAINER_SCORE": parseFloat(url_metrics.maintainer.toFixed(5)),
-            "LICENSE_SCORE": parseFloat(url_metrics.license.toFixed(5))
+            "LICENSE_SCORE": parseFloat(url_metrics.license.toFixed(5)),
+            "PINNED_FRAC_SCORE": parseFloat(url_metrics.pinned_frac.toFixed(5)),
+            "REVIEWED_FRAC_SCORE": parseFloat(url_metrics.reviewed_pull_frac.toFixed(5))
         };
         allScores.push(score);
 
     }
-
-    return allScores;
-
+        //url_metrics.print_scores(); //Prints the NDJSON
+     return allScores;
 }
 
 function npm_to_github(pkg_name: string) {
