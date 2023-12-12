@@ -775,7 +775,7 @@ async function getS3KeyFromDynamoDB(id) {
     return result.Item ? result.Item.s3Key : null;
 }
 
-const port = 8080;
+const port = 80;
 app.listen(port, '0.0.0.0', () => {
     logger.debug(`Server listening on port ${port}`);
 });
