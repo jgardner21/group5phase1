@@ -136,10 +136,51 @@ const dynamoDB = new AWS.DynamoDB.DocumentClient();
         const packageId = shortid.generate();
         logger.debug(`Generated unique package ID: ${packageId}`);
 
+
+        // adding rating
+        if(req.body.URL){
+
+            const gitHubURL = req.body.URL;
+            const tempFilePath = path.join(os.tmpdir(), `${packageId}-urls.txt`);
+        
+
+            try {
+                fs.writeFileSync(tempFilePath, gitHubURL + '\n');
+           
+            } catch (err) {
+                logger.error("Error writing to file", { Error: err.message });
+                return res.status(500).send({ message: "Error writing to file" });
+            }
+    
+            try {
+                const scores = await get_metric_scores(tempFilePath);
+                const isAnyScoreAboveThreshold = scores.some(score => {
+                    return score.NET_SCORE > 0.5 ||
+                           score.RAMP_UP_SCORE > 0.5 ||
+                           score.CORRECTNESS_SCORE > 0.5 ||
+                           score.BUS_FACTOR_SCORE > 0.5 ||
+                           score.RESPONSIVE_MAINTAINER_SCORE > 0.5 ||
+                           score.LICENSE_SCORE > 0.5 ||
+                           score.PINNED_FRAC_SCORE > 0.5 ||
+                           score.REVIEWED_FRAC_SCORE > 0.5;
+                });
+                
+                if (!isAnyScoreAboveThreshold) {
+                    // No score is high enough, reject the upload
+                    return res.status(424).send({ message: "Package is not uploaded due to the disqualified rating" });
+                }
+            } catch (scoreError) {
+                logger.error("Error calculating package score", { Error: scoreError.message });
+                return res.status(500).send({ message: "Error calculating package score" });
+            }
+        
+        }
+        // fix end for rating
+
+
         // Find the first .md file instead of specifically a README.md
-        console.log("start")
         const mdFiles = glob.sync(path.join(repoPath, '**/*.md')); // Use glob to search for .md files
-        console.log("end")
+
         if (mdFiles.length === 0) {
             logger.error(".md file not found in the repository");
             return res.status(500).send({ message: ".md file not found in the repository" });
