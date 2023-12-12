@@ -12,6 +12,8 @@ const logger = require('./dist/logger.js').default;
 const cors = require('cors');
 const app = express();
 const shortid = require('shortid');
+const glob = require('glob');
+
 
 
 // CORS configuration for development and production
@@ -75,8 +77,17 @@ const dynamoDB = new AWS.DynamoDB.DocumentClient();
             logger.debug(`Written base64 content to temporary zip file at: ${zipFilePath}`);
 
             zip = new AdmZip(zipFilePath);
+            const packageJsonEntry = zip.getEntries().find(entry => entry.entryName.endsWith('package.json'));
+            
+            if (!packageJsonEntry) {
+                return res.status(500).send({ message: "Error reading package.json"});
+            }
+
+            packageJson = JSON.parse(packageJsonEntry.getData().toString('utf8'));
+
             repoPath = path.join(tempDir, 'repo');
             zip.extractAllTo(repoPath, true);
+            
             logger.debug(`Extracted zip content to temporary repository path: ${repoPath}`);
         } else if (req.body.URL) {
             logger.debug("Processing URL upload: ", req.body.URL);
@@ -91,21 +102,25 @@ const dynamoDB = new AWS.DynamoDB.DocumentClient();
                 throw err;
             });
             logger.debug(`Cloned repository to temporary path: ${repoPath}`);
+
+            try {
+                packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
+            } catch (readError) {
+                logger.error("Error reading package.json", {
+                    Path: path.join(repoPath, 'package.json'),
+                    Error: readError.message
+                });
+                return res.status(500).send({message: "Error reading package.json"});
+            }
+            
         } else {
             logger.warn("Invalid request: No package content or URL provided");
             return res.status(400).send({message: "No package content or URL provided"});
         }
 
         // Extract package name and version from package.json
-        try {
-            packageJson = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
-        } catch (readError) {
-            logger.error("Error reading package.json", {
-                Path: path.join(repoPath, 'package.json'),
-                Error: readError.message
-            });
-            return res.status(500).send({message: "Error reading package.json"});
-        }
+
+
 
         packageName = packageJson.name;
         packageVersion = packageJson.version;
@@ -120,6 +135,45 @@ const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
         const packageId = shortid.generate();
         logger.debug(`Generated unique package ID: ${packageId}`);
+
+        // Find the first .md file instead of specifically a README.md
+        console.log("start")
+        const mdFiles = glob.sync(path.join(repoPath, '**/*.md')); // Use glob to search for .md files
+        console.log("end")
+        if (mdFiles.length === 0) {
+            logger.error(".md file not found in the repository");
+            return res.status(500).send({ message: ".md file not found in the repository" });
+        }
+     
+
+        const mdFilePath = mdFiles[0]; // Take the first .md file found
+        logger.debug(`.md file found at: ${mdFilePath}`);
+        
+        let mdContent;
+        try {
+            mdContent = fs.readFileSync(mdFilePath, 'utf8');
+        } catch (readError) {
+            logger.error("Error reading .md file", { Path: mdFilePath, Error: readError.message });
+            return res.status(500).send({ message: "Error reading .md file" });
+        }
+
+        try {
+            const mdS3Params = {
+                Bucket: '461zips',
+                Key: `readme/${packageName}-${packageVersion}.md`,
+                Body: mdContent,
+                Metadata: { 'name': packageName, 'version': packageVersion, 'id': packageId }
+            };
+
+            logger.debug("Starting S3 upload for .md file", { Bucket: mdS3Params.Bucket, Key: mdS3Params.Key });
+            await s3.upload(mdS3Params).promise();
+            logger.debug(".md file S3 upload successful");
+
+        } catch (readError) {
+            logger.error("Error reading or uploading .md file", { Path: mdEntry.entryName, Error: readError.message });
+            return res.status(500).send({ message: "Error reading package.json" }); // Update this error message as needed
+        }
+
 
         // Create a zip file from the extracted content
         zip = new AdmZip();
@@ -535,7 +589,7 @@ app.post('/package/byRegEx', async (req, res) => {
                 console.log(`Processing package: ${pkg.name}-${pkg.version}`);
         
                 // Construct the S3 key for the README file
-                const readmeS3Key = `readmes/${pkg.name}-${pkg.version}.md`;
+                const readmeS3Key = `readme/${pkg.name}-${pkg.version}.md`;
         
                 // Fetch the README file from S3
                 let fetchedReadme;
