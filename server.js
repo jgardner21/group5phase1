@@ -410,6 +410,35 @@ app.put('/package/:id', async (req, res) => {
         await s3.upload(updateParams).promise();
         logger.debug("Package updated in S3");
 
+        // update the readme content (probably might need fixing)
+        const base64Content = data.Content;
+        const zipBuffer = Buffer.from(base64Content, 'base64');
+        const zip = new AdmZip(zipBuffer);
+
+        // Extract and update the .md file in S3
+        const readmeEntry = zip.getEntries().find(entry => entry.entryName.endsWith('.md'));
+        if (readmeEntry) {
+            const readmeContent = readmeEntry.getData().toString('utf8');
+            const readmeS3Key = `readmes/${metadata.Name}-${metadata.Version}.md`;
+            const readmeUpdateParams = {
+                Bucket: '461zips',
+                Key: readmeS3Key,
+                Body: readmeContent,
+                Metadata: {
+                    'name': metadata.Name,
+                    'version': metadata.Version,
+                    'id': metadata.ID
+                }
+            };
+
+            await s3.upload(readmeUpdateParams).promise();
+            console.log("README updated in S3")
+            logger.debug("README updated in S3");
+        } else {
+            logger.warn("No .md file found in the package");
+        }
+    // end of readme update
+
         // Update DynamoDB entry
         const dynamoDBUpdateParams = {
             TableName: 'S3Metadata',
@@ -672,52 +701,7 @@ app.post('/package/byRegEx', async (req, res) => {
     }
 });
 
-async function fetchPackageData(packageId) {
-    try {
-        const s3Key = await getS3KeyFromDynamoDB(packageId);
-        if (!s3Key) {
-            throw new Error('Package does not exist.');
-        }
 
-        const s3Params = {
-            Bucket: '461zips',
-            Key: s3Key
-        };
-
-        const data = await s3.getObject(s3Params).promise();
-        const packageContent = data.Body.toString('base64');
-
-        const metadata = {
-            Name: data.Metadata['name'],
-            Version: data.Metadata['version'],
-            ID: data.Metadata['id']
-        };
-
-        return {
-            metadata: metadata,
-            data: {
-                Content: packageContent,
-            }
-        };
-    } catch (error) {
-        logger.error(`Error fetching package data for package ID ${packageId}`, error);
-        throw error;
-    }
-}
-
-function extractReadmeFromZip(encodedZipContent) {
-    const zipContent = Buffer.from(encodedZipContent, 'base64');
-    const zip = new AdmZip(zipContent);
-    const zipEntries = zip.getEntries();
-
-    const readmeEntry = zipEntries.find(entry => /readme\.md/i.test(entry.entryName));
-
-    if (readmeEntry) {
-        return readmeEntry.getData().toString('utf8');
-    } else {
-        return ''; // No README found, return an empty string
-    }
-}
 
 async function emptyS3Bucket() {
     const listedObjects = await s3.listObjectsV2({Bucket: '461zips'}).promise();
