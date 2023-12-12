@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config();
 const simpleGit = require('simple-git');
 const os = require('os');
 const AdmZip = require('adm-zip');
